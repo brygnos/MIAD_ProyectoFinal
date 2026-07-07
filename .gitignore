@@ -1,1 +1,55 @@
-/data/
+# ============================================
+# Datos (grandes — NUNCA versionar en git)
+# ============================================
+data/raw/*
+data/interim/*
+data/processed/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+
+# Formatos de datos pesados, en cualquier ubicación
+*.csv
+*.parquet
+*.pcap
+
+# ============================================
+# Python
+# ============================================
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+
+# ============================================
+# Jupyter
+# ============================================
+.ipynb_checkpoints/
+
+# ============================================
+# Reportes / figuras generadas
+# ============================================
+reports/figures/*
+!reports/figures/.gitkeep
+
+# ============================================
+# Sistema operativo / editores
+# ============================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ============================================
+# Claude Code (archivos locales, no compartir)
+# ============================================
+CLAUDE.local.md
+.claude/settings.local.json

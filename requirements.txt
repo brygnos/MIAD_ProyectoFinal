@@ -1,0 +1,22 @@
+# Núcleo numérico / datos
+numpy>=1.26,<3
+pandas>=2.2,<3
+scipy>=1.13
+
+# Machine learning
+scikit-learn>=1.5
+imbalanced-learn>=0.13
+
+# Lectura/escritura de Parquet
+pyarrow>=16
+
+# Visualización
+matplotlib>=3.9
+seaborn>=0.13
+
+# Notebooks
+jupyterlab>=4.2
+ipykernel>=6.29
+
+# Nota: una vez el entorno funcione, congelar versiones exactas con:
+#   pip freeze > requirements.txt
