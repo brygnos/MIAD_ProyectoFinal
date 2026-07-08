@@ -1,106 +1,67 @@
 # Proyecto Final MIAD — Detección de tráfico de red malicioso
 
-Detección de intrusiones/anomalías de red mediante técnicas de analítica y
-aprendizaje de máquina sobre el dataset **CIC-IDS2017**. Enmarcado como un
-problema de **clasificación con desbalance de clases e interpretabilidad**.
+Clasificación de tráfico de red (normal vs tipos de ataque) sobre el dataset
+**CIC-IDS2017**, enmarcada como un problema de **clasificación con desbalance
+de clases e interpretabilidad**.
 
-Ver link aquí a base de datos: https://www.unb.ca/cic/datasets/ids-2017.html
+> 📄 **La fuente de verdad del proyecto es el informe vivo:
+> [reports/informe.md](reports/informe.md)** (hallazgos, decisiones, métricas
+> y limitaciones, fase por fase). Las preguntas de negocio y su evaluación
+> están en [preguntas_de_negocio.md](preguntas_de_negocio.md).
 
-> Estado: en fase de exploración de datos y definición de preguntas de negocio.
+## Datos
 
----
+- **CIC-IDS2017** — Canadian Institute for Cybersecurity:
+  https://www.unb.ca/cic/datasets/ids-2017.html
+- Colocar los 8 CSV (`*.pcap_ISCX.csv`) en `data/raw/` (los datos no se
+  versionan).
 
-## Preguntas de negocio (a confirmar tras el EDA)
-
-Se definirán con base en lo que los datos realmente soporten. Candidatas:
-
-1. **Interpretabilidad** — ¿Qué características del tráfico distinguen un ataque
-   del tráfico normal, y cuáles son las más informativas?
-2. **Desbalance / clases raras** — ¿Qué tan bien se clasifica el *tipo* de ataque,
-   incluyendo los poco frecuentes, y qué técnicas de manejo de desbalance mejoran
-   esa detección?
-3. **No supervisado** — ¿Un modelo entrenado solo con tráfico normal puede detectar
-   ataques que nunca vio etiquetados?
-
-*(Actualizar esta sección con las preguntas finales después del EDA.)*
-
----
-
-## Dataset
-
-- **CIC-IDS2017** — Canadian Institute for Cybersecurity (University of New Brunswick).
-- ~2.83M flujos, ~80 features de flujo (CICFlowMeter) + etiqueta, tráfico benigno
-  y varios ataques (brute force, DoS/DDoS, web, infiltración, botnet, port scan)
-  a lo largo de 5 días.
-- Descarga: https://www.unb.ca/cic/datasets/ids-2017.html
-- **Ubicación esperada:** colocar los CSV en `data/raw/` (ignorados por git).
-
-### Limitaciones conocidas (documentar en el informe)
-El dataset original tiene problemas de calidad reportados en la literatura
-(Engelen 2021; Lanvin 2022/2023; Rosay 2022): errores de etiquetado, ataques
-no etiquetados, miscálculo de features, paquetes desordenados/duplicados,
-valores negativos e Inf/NaN, y desbalance severo. El pipeline los aborda en la
-fase de limpieza; existen versiones corregidas (ej. LYCOS-IDS2017) que pueden
-usarse como comparación.
-
----
-
-## Estructura del proyecto
+## Estructura
 
 ```
-MIAD_ProyectoFinal/
-├── CLAUDE.md            # Instrucciones para Claude Code (contexto del proyecto)
-├── README.md
-├── requirements.txt
-├── .gitignore
-├── data/
-│   ├── raw/             # CSV originales de CIC-IDS2017 (gitignored)
-│   ├── interim/         # datos limpios/unidos intermedios (gitignored)
-│   └── processed/       # dataset final en Parquet, listo para modelar (gitignored)
-├── notebooks/           # 01_eda.ipynb, 02_preprocessing.ipynb, ...
-├── src/                 # funciones reutilizables (carga, limpieza, features, modelos)
-└── reports/
-    └── figures/         # gráficas exportadas para el informe
+├── data/            raw/ (CSV originales) · interim/ · processed/ (gitignored)
+├── notebooks/       01_eda · 02_baseline · 03_desbalance
+├── src/             config · carga · calidad · preparacion · limpieza ·
+│                    split · features · etiquetas · experimentos · resultados
+└── reports/         informe.md (informe vivo) · figures/ · resultados_fase3/
 ```
-
----
 
 ## Setup
 
 ```bash
-# 1. Crear entorno virtual
 python -m venv .venv
-
-# 2. Activar
-#   Windows (PowerShell):  .venv\Scripts\Activate.ps1
-#   WSL / Linux / macOS:   source .venv/bin/activate
-
-# 3. Instalar dependencias
+# Windows: .venv\Scripts\Activate.ps1   |   Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
-
-# 4. Registrar el kernel para Jupyter
 python -m ipykernel install --user --name miad-proyecto
 ```
 
-> Para reproducibilidad final, una vez el entorno funcione, congelar versiones
-> exactas: `pip freeze > requirements.txt`.
+## Cómo consumir el proyecto (tres niveles)
 
----
+1. **Leer (no requiere correr nada).** Los notebooks se entregan **ya
+   ejecutados**, con tablas y figuras embebidas, y el informe
+   ([reports/informe.md](reports/informe.md)) contiene los mismos resultados.
+2. **Re-ejecutar los análisis ligeros.** `03_desbalance.ipynb` lee únicamente
+   los CSVs de `reports/resultados_fase3/` (kilobytes, incluidos en el repo):
+   corre en segundos en cualquier equipo.
+3. **Reproducción completa desde los CSV crudos** (opcional; requiere ~8 GB de
+   RAM y descargar el dataset):
 
-## Cómo correr (por fases)
+```bash
+python -m src.preparacion    # 1. consolida los 8 CSV            (~3 min)
+python -m src.limpieza       # 2. aplica la limpieza aprobada    (~2 min)
+python -m src.split          # 3. split 80/20 único (se niega a repetirse)
+python -m src.experimentos   # 4. matriz de desbalance (Fase 3)  (~40-90 min*)
+python -m src.resultados     # 5. condensa resultados a CSVs     (~1 min)
+```
 
-1. **Fase 0-1 — Exploración y preguntas de negocio.** Colocar los CSV en
-   `data/raw/`, ejecutar el EDA (`notebooks/01_eda.ipynb`) y producir
-   `preguntas_de_negocio.md`.
-2. **Fase 2 — Preprocesamiento.** Limpieza (Inf/NaN, negativos, duplicados,
-   nombres de columna), consolidación a Parquet en `data/processed/`.
-3. **Fase 3 — Modelado.** Entrenamiento de modelos supervisados/no supervisados
-   según las preguntas definidas.
-4. **Fase 4 — Evaluación.** Métricas honestas (con desbalance), interpretabilidad,
-   gráficas para el informe.
-
----
+\* Tiempos medidos en una máquina de 24 núcleos y 32 GB de RAM; en un equipo
+modesto el paso 4 puede tomar varias horas. Es un cómputo de **una sola vez**:
+sus resultados quedan guardados y los notebooks no lo repiten. Los notebooks
+(`01_eda`, `02_baseline`, `03_desbalance`) se ejecutan en ese orden con el
+kernel del entorno; `02_baseline` re-entrena sus líneas base (~15 min).
 
 ## Reproducibilidad
-- `RANDOM_STATE = 42` en todo el proyecto.
-- Los datos no se versionan (ver `.gitignore`); descargar de la fuente oficial.
+
+`RANDOM_STATE = 42` en todo el proyecto; el conjunto de prueba se aparta una
+sola vez y no se toca hasta la evaluación final; todo remuestreo ocurre dentro
+de pipelines de `imblearn` durante la validación cruzada.

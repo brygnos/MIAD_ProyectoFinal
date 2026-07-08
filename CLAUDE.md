@@ -42,3 +42,10 @@ como un problema de seguridad ofensiva.
 - Antes de escribir pipeline, inspeccionar los datos reales (schema, dtypes,
   distribución de clases, calidad).
 - Ante cualquier ambigüedad, preguntar en vez de asumir.
+
+## Informe vivo (SIEMPRE actualizar)
+- Documento único y acumulativo en reports/informe.md: es la fuente de verdad del reporte.
+- Al terminar CADA fase, actualízalo: qué se hizo, decisiones y su justificación,
+  tablas de métricas, figuras generadas (con su ruta), limitaciones y preguntas abiertas.
+- Nunca borres el historial de fases anteriores: se agrega o se refina, no se reemplaza.
+- El README se mantiene corto (mapa y cómo ejecutar) y solo enlaza al informe.

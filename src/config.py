@@ -25,3 +25,11 @@ ETIQUETA_BENIGNA = "BENIGN"
 
 # Archivo consolidado que produce la fase de preparación
 ARCHIVO_CONSOLIDADO = RUTA_PROCESSED / "cicids2017_consolidado.parquet"
+
+# Fase 2: dataset limpio (decisiones aprobadas en preguntas_de_negocio.md)
+ARCHIVO_LIMPIO = RUTA_INTERIM / "cicids2017_limpio.parquet"
+
+# Fase 2: split único train/test (test apartado hasta el final del proyecto)
+ARCHIVO_TRAIN = RUTA_PROCESSED / "train.parquet"
+ARCHIVO_TEST = RUTA_PROCESSED / "test.parquet"
+PROPORCION_TEST = 0.2
