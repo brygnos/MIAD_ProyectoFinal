@@ -253,3 +253,181 @@ colaboradores un hardware equivalente para evaluar el trabajo.
 Ratificar **árboles + pesos de clase** como candidato para la única
 evaluación final sobre el test, y proceder con la pregunta 1
 (interpretabilidad) y la pregunta 3 (no supervisado con el lunes benigno).
+
+---
+
+## Fase 4 — Interpretabilidad (pregunta 1) y detección no supervisada (pregunta 3)
+
+Todo sobre el conjunto de entrenamiento (el test sigue intacto), mismas 48
+features, CV estratificada de 5 particiones, semilla 42. Cómputo pesado
+checkpointeado en `src/interpretabilidad.py` y `src/no_supervisado.py`; los
+notebooks `04_interpretabilidad.ipynb` y `05_no_supervisado.ipynb` solo leen
+los CSVs de `reports/resultados_fase4/`.
+
+### Pregunta 1 — ¿Qué distingue un ataque del tráfico normal?
+
+**La historia legible (regresión logística estandarizada, binaria).** Los
+coeficientes más grandes (media ± desv entre 5 particiones, figura
+`reports/figures/11_coeficientes_logistica.png`) cuentan una historia de
+**ritmo**: las features IAT (silencio entre paquetes: `Fwd IAT Mean` −12,0,
+`Fwd IAT Min` +11,5, `Fwd IAT Std` +8,6) describen el tráfico "metrallador"
+de las herramientas automatizadas; `Packet Length Variance` (+11,3) delata
+tamaños de paquete anormalmente dispares; `Flow Duration` (+5,1) captura las
+conexiones eternas de los DoS lentos; y el indicador
+`Init_Win_bytes_forward_no_aplica` (−8,7) resultó informativo por sí mismo
+(valida la decisión de limpieza de tratar el −1 como código).
+
+**El modelo real (importancia por permutación, HistGB + pesos, binario).**
+Top: `Flow Duration` (0,086), **`Destination Port` (0,072)**,
+`Bwd Packet Length Min/Mean`, `Fwd Packet Length Max`, `Bwd Header Length`,
+`Flow Bytes/s`, `Init_Win_bytes_forward(_no_aplica)`
+(figura `reports/figures/12_importancia_permutacion.png`).
+
+**Cruce de rankings:** coinciden en el núcleo (duración, ritmo IAT, tamaño
+máximo de ida, el indicador de no-aplica); divergen en el énfasis (la
+logística exprime el ritmo; los árboles, los tamaños de respuesta y el
+puerto). El ranking entregable con explicación por feature está en el
+notebook 04.
+
+**El experimento del puerto (verificación de validez central).**
+`Destination Port` es el único identificador entre las 48 features y era el
+puesto 2 de la permutación. Reentrenando el campeón multiclase sin él
+(mismas particiones):
+
+| | Con puerto | Sin puerto |
+|---|---|---|
+| macro-F1 | 0,970 ± 0,002 | 0,950 ± 0,004 |
+| Recall (peor delta) | — | −0,005 (SSH-Patator); Bot +0,004 |
+| Precisión Bot | 0,614 | 0,461 |
+| Precisión Web Attack | 0,952 | 0,872 |
+
+**Veredicto sin maquillar:** el modelo **no se derrumba: aprende
+comportamiento**. El recall se mantiene en todas las clases; el costo del
+puerto está localizado en la **precisión** de las dos clases difíciles (Bot,
+Web Attack): sin el puerto, el modelo confunde más benignos con esas clases.
+El puerto no sostenía la detección, pero ayudaba a descartar falsas alarmas.
+La variante sin puerto (0,950) es la estimación honesta para una red donde
+los servicios no usen puertos canónicos
+(figura `reports/figures/13_experimento_puerto.png`).
+
+### Pregunta 3 — ¿Detecta ataques un modelo entrenado solo con tráfico normal?
+
+Isolation Forest (principal) y LOF (contraste, submuestra de 50.000)
+entrenados con los **394.236 benignos del lunes** del train (escalado ajustado
+solo con ellos); evaluados sobre martes-viernes del train (1.604.226 flujos,
+340.593 ataques). Umbral por cuantiles del score del lunes (0,5%/1%/2%;
+referencia 1%) — equivale al parámetro de contaminación y reconoce la posible
+presencia de ataques sin etiquetar en el "benigno" (Engelen 2021; Lanvin 2023).
+
+**Resultado central (umbral 1%, figura
+`reports/figures/14_recall_no_supervisado.png`):** el detector parte los
+ataques en dos mundos:
+
+| Mundo | Clases (recall IF @1%) | Por qué |
+|---|---|---|
+| Visibles: flujos estructuralmente raros | **Heartbleed 0,89 · Infiltration 0,48 · DoS slowloris 0,52** · DoS Hulk 0,24 | El flujo individual ya es anómalo (exfiltración gigante, conexión eterna) |
+| Invisibles: ataques camuflados | FTP/SSH-Patator, PortScan, Web Attack, Bot: **0,000** | Cada flujo parece una conexión normal; lo anómalo es el *agregado* de miles de flujos, que un detector por-flujo no puede ver |
+
+Recall global de ataques al 1%: **11,8%** — como detector general, no sirve.
+Pero **Heartbleed e Infiltration son exactamente las clases que el multiclase
+supervisado tuvo que excluir por falta de datos**: el no supervisado
+complementa al supervisado justo donde este no llega, sin usar una sola
+etiqueta. El LOF confirma la complementariedad por contraste (ve SSH-Patator
+0,91 y algo de PortScan; pierde Heartbleed y los DoS lentos).
+
+**Falsas alarmas por día (figura
+`reports/figures/15_falsas_alarmas_por_dia.png`):** la mayoría de los días
+0,7-1,8% (consistente con el umbral del 1%), pero el viernes en la tarde
+(archivo del DDoS) el IF dispara **9,6%** de falsas alarmas sobre benignos:
+la deriva temporal del tráfico normal es un costo real del enfoque. Scores en
+`reports/figures/16_scores_no_supervisado.png`.
+
+**Limitaciones documentadas:** posible contaminación del "benigno" del lunes
+(errores de etiquetado en la literatura; mitigado con umbral por cuantiles,
+no descartable); LOF con submuestra por costo; resultados sobre
+entrenamiento (la evaluación en test será única, en la fase final).
+
+### Documentos de entrega
+
+Se creó el **esqueleto** de `reports/informe_final.md` (documento de ENTREGA,
+limpio): solo títulos de sección con marcador "pendiente"; se redactará en la
+fase final, cuando existan la evaluación única sobre el test. Este documento
+(`informe.md`) sigue siendo el de TRABAJO, acumulativo.
+
+### Pendiente para la fase final (única evaluación sobre el test)
+
+1. Entrenar el campeón (árboles + pesos, con y sin puerto) sobre TODO el
+   entrenamiento y evaluarlo UNA vez sobre `test.parquet`.
+2. Umbral de Bot: explorar el intercambio precisión/recall (AP 0,91 lo
+   permite) ANTES de tocar el test.
+3. Evaluar el Isolation Forest del lunes sobre el test (martes-viernes).
+4. Redactar `informe_final.md` completo.
+
+---
+
+## Fase final — Evaluación única sobre el test e informe de entrega
+
+### Verificaciones previas (antes de tocar el test)
+
+- Ningún módulo lee `test.parquet` salvo `src/evaluacion_final.py` (verificado
+  con búsqueda en todo el código: solo `config.py` lo define y `split.py` lo
+  crea con guardia anti-regeneración).
+- El split no se regeneró: `train/test.parquet` conservan su fecha de creación
+  (2026-07-07).
+- `Destination Port` es el ÚNICO identificador entre las 48 features (se buscó
+  también `Protocol`, puertos de origen, IPs, timestamps: no sobrevivió ninguno
+  a la selección; "Idle Std" aparece en la búsqueda por subcadena pero es una
+  feature de comportamiento).
+
+### Paso 1 — Umbral de Bot (solo con train)
+
+Con las probabilidades out-of-fold del train (Fase 3/4): **alarma de Bot solo
+si P(Bot) ≥ 0,999**; si no, el flujo se reasigna a la segunda clase más
+probable. Intercambio en train OOF: con puerto, precisión 0,61→0,93 con recall
+0,98→0,68; sin puerto, 0,46→0,87 con recall 0,61. Nota técnica: las
+probabilidades OOF están guardadas en float16, lo que hace el umbral grueso
+(cercano al extremo de la escala) — esto resultó relevante después.
+
+### Pasos 2-4 — Resultados del test (única pasada, `src/evaluacion_final.py`)
+
+| Test | macro-F1 | macro-F1 solo ataques |
+|---|---|---|
+| **Modelo final (con puerto + umbral Bot)** | **0,975** | **0,972** |
+| Con puerto, argmax | 0,967 | 0,964 |
+| Sin identificadores, argmax | 0,942 | 0,937 |
+| Sin identificadores, umbral Bot | 0,888 | 0,877 |
+
+- **CV ≈ test, dicho explícitamente:** 0,970 ± 0,002 (CV) vs 0,967 (test) con
+  puerto; 0,950 ± 0,004 vs 0,942 sin identificadores. **No hubo sobreajuste.**
+- **El umbral de Bot transfirió en la variante con puerto** (precisión 0,947 /
+  recall 0,728 en test, diseñado a 0,93/0,68) y **NO transfirió sin puerto**:
+  ese modelo nunca produjo P(Bot) ≥ 0,999 en test → 0 alarmas de Bot (por eso
+  0,888). Siguiendo la regla de la fase, NO se reajustó nada tras ver el test;
+  queda como lección: umbral fijado en el extremo de la escala + cambio de
+  variante = frágil. La cifra honesta sin identificadores es la de argmax
+  (0,942).
+- Falsas alarmas del modelo final sobre BENIGN en test: **0,12%** (489 de
+  414.468). Matriz de confusión:
+  `reports/figures/17_confusion_test_final.png`.
+- **Ultra-raras (ilustrativo, n mínima):** el binario (recall ataque 1,000,
+  precisión 0,994 en test) marcó Heartbleed 2 de 2 e Infiltration 3 de 7.
+- **Isolation Forest sobre test:** replica el train — 11,8% global @1%;
+  slowloris 0,52, Hulk 0,24, Heartbleed 1 de 2, Infiltration 4 de 7 (n mínima);
+  camuflados en ~0; falsas alarmas 9,6% el viernes-tarde, ~1% el resto
+  (el lunes del test, nunca visto, dio 0,98%: umbral bien calibrado).
+
+Resultados en `reports/resultados_final/` y `notebooks/06_evaluacion_final.ipynb`.
+
+### Paso 5 — Informe de entrega
+
+`reports/informe_final.md` redactado completo desde este documento: limpio,
+en lenguaje llano, con ambas cifras al frente (0,975/0,970 con puerto;
+0,942-0,950 como estimación conservadora sin el artefacto, NO como desempeño
+garantizado en red real), macro-F1 solo-ataques junto al global, coincidencia
+temática (no feature a feature) de los rankings, el indicador `_no_aplica`
+como decisión de limpieza vuelta señal, SQL Injection dentro de la familia
+Web Attack, el punto ciego del no supervisado como límite del enfoque, y la
+sección de limitaciones completa.
+
+**Proyecto cerrado del lado de cómputo. Regla vigente: los resultados del test
+no se usan para reajustar ningún modelo.**

@@ -20,10 +20,17 @@ de clases e interpretabilidad**.
 
 ```
 ├── data/            raw/ (CSV originales) · interim/ · processed/ (gitignored)
-├── notebooks/       01_eda · 02_baseline · 03_desbalance
+├── docs/            guia_proyecto.md (material de estudio del autor; NO es
+│                    parte del informe de entrega)
+├── notebooks/       01_eda · 02_baseline · 03_desbalance ·
+│                    04_interpretabilidad · 05_no_supervisado ·
+│                    06_evaluacion_final
 ├── src/             config · carga · calidad · preparacion · limpieza ·
-│                    split · features · etiquetas · experimentos · resultados
-└── reports/         informe.md (informe vivo) · figures/ · resultados_fase3/
+│                    split · features · etiquetas · experimentos · resultados ·
+│                    interpretabilidad · no_supervisado · evaluacion_final
+└── reports/         informe.md (trabajo) · informe_final.md (entrega) ·
+                     figures/ · resultados_fase3/ · resultados_fase4/ ·
+                     resultados_final/
 ```
 
 ## Setup
@@ -47,18 +54,28 @@ python -m ipykernel install --user --name miad-proyecto
    RAM y descargar el dataset):
 
 ```bash
-python -m src.preparacion    # 1. consolida los 8 CSV            (~3 min)
-python -m src.limpieza       # 2. aplica la limpieza aprobada    (~2 min)
-python -m src.split          # 3. split 80/20 único (se niega a repetirse)
-python -m src.experimentos   # 4. matriz de desbalance (Fase 3)  (~40-90 min*)
-python -m src.resultados     # 5. condensa resultados a CSVs     (~1 min)
+python -m src.preparacion        # 1. consolida los 8 CSV                (~3 min)
+python -m src.limpieza           # 2. aplica la limpieza aprobada        (~2 min)
+python -m src.split              # 3. split 80/20 único (se niega a repetirse)
+python -m src.experimentos       # 4. matriz de desbalance (Fase 3)      (~40-90 min*)
+python -m src.resultados         # 5. condensa la Fase 3 a CSVs          (~1 min)
+python -m src.interpretabilidad  # 6. pregunta 1 + experimento del puerto (~15 min*)
+python -m src.no_supervisado     # 7. pregunta 3 (Isolation Forest/LOF)  (~10 min*)
+python -m src.evaluacion_final   # 8. ÚNICA evaluación sobre el test     (~2 min*)
 ```
 
+> El paso 8 se ejecutó **una sola vez** (regla del proyecto) y su checkpoint
+> impide recalcularlo por accidente. El informe de entrega es
+> [reports/informe_final.md](reports/informe_final.md).
+
 \* Tiempos medidos en una máquina de 24 núcleos y 32 GB de RAM; en un equipo
-modesto el paso 4 puede tomar varias horas. Es un cómputo de **una sola vez**:
-sus resultados quedan guardados y los notebooks no lo repiten. Los notebooks
-(`01_eda`, `02_baseline`, `03_desbalance`) se ejecutan en ese orden con el
-kernel del entorno; `02_baseline` re-entrena sus líneas base (~15 min).
+modesto los pasos marcados pueden tomar varias horas en total. Son cómputos de
+**una sola vez**, checkpointeados: si se interrumpen, al relanzar no repiten lo
+ya calculado, y los notebooks no los repiten jamás. Los notebooks (`01_eda`,
+`02_baseline`, `03_desbalance`, `04_interpretabilidad`, `05_no_supervisado`,
+`06_evaluacion_final`) se ejecutan en ese orden con el kernel del entorno; `02_baseline` re-entrena sus
+líneas base (~15 min), los demás leen resultados guardados y corren en
+segundos.
 
 ## Reproducibilidad
 
