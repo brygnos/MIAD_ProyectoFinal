@@ -1,7 +1,10 @@
-# Informe — Detección de tráfico de red malicioso (CIC-IDS2017)
+# Informe detallado del proyecto — Detección de tráfico de red malicioso (CIC-IDS2017)
 
-> **Documento vivo.** Fuente de verdad del proyecto: se actualiza al cierre de
-> cada fase, agregando (nunca borrando) lo anterior. El README solo enlaza aquí.
+> **Este es el informe DETALLADO:** la historia técnica completa del proyecto,
+> organizada por fases, con todas las decisiones, sus justificaciones, las
+> cifras y las limitaciones. La **versión resumida** (la entrega, para lectura
+> rápida) es [informe_final.md](informe_final.md); ambos documentos cuentan la
+> misma historia a distinta profundidad.
 >
 > Proyecto de tesis — Maestría en Inteligencia Analítica de Datos. El problema
 > se aborda como **clasificación con desbalance de clases e interpretabilidad**;
@@ -54,18 +57,56 @@ lunes es 100% benigno → la validación multiclase debe ser aleatoria
 estratificada (un split por días dejaría ataques sin representar), y el lunes
 habilita el enfoque no supervisado de la pregunta 3.
 
-### Preguntas de negocio (aprobadas; detalle en `preguntas_de_negocio.md`)
+### Las tres preguntas de negocio (evaluadas contra el EDA, aprobadas y ejecutadas)
 
-1. **Interpretabilidad** — ¿qué features distinguen ataque de tráfico normal?
-   ✅ sobrevive tal cual.
-2. **Multiclase con desbalance** — ¿qué tan bien se clasifica el tipo de
-   ataque y qué técnicas de desbalance ayudan? ⚠️ sobrevive **con ajustes**:
-   los 3 ataques web se agrupan en la familia "Web Attack"; Heartbleed e
-   Infiltration quedan fuera del multiclase (se evalúan a nivel binario).
-3. **No supervisado** — ¿un modelo entrenado solo con tráfico normal detecta
-   ataques no vistos? ✅ sobrevive como complementaria.
+Las tres candidatas se contrastaron con lo que el EDA mostró que los datos
+realmente soportan. Ninguna quedó invalidada; la 2 exigió reformulación. Se
+adoptaron las preguntas 1 y 2 como núcleo de la tesis y la 3 como capítulo
+complementario. Su versión final, con el método tal como se ejecutó:
 
-### Las 6 decisiones de limpieza aprobadas y su porqué
+**Pregunta 1 — Interpretabilidad** (✅ sobrevivió tal cual): *¿qué
+características del tráfico distinguen un ataque del tráfico normal y cuáles
+son las más informativas?* La soportan 77 features numéricas homogéneas en
+2,8M de flujos, con diferencias visibles entre normal y ataque pero con
+solapamiento (ninguna feature separa sola: el caso donde un análisis
+multivariado aporta); el desbalance binario (80/20) es moderado. Condición
+previa detectada por el propio EDA: podar las 8 features constantes y los
+51 pares con |r| > 0,95, porque dos columnas idénticas se "reparten" la
+importancia y dañan la interpretación. Método ejecutado (Fase 4): regresión
+logística estandarizada (signo y magnitud de coeficientes) contrastada con la
+importancia por permutación del modelo de árboles campeón, más la
+verificación del puerto de destino como control de artefactos.
+
+**Pregunta 2 — Multiclase con desbalance** (⚠️ sobrevivió con ajustes): *¿qué
+tan bien se clasifica el TIPO de ataque y qué técnicas de desbalance mejoran
+la detección de los tipos poco frecuentes?* 11 de las 14 clases de ataque
+tienen datos suficientes para CV estratificada; tres no soportan métricas por
+clase (Infiltration 36, SQL Injection 21, Heartbleed 11 — con 5 particiones,
+Heartbleed aporta ~2 casos por fold y cualquier cifra sería ruido; ningún
+sobremuestreo fabrica información que no está). Ajustes adoptados: los 3
+ataques web se agrupan en la familia **"Web Attack"** (SQL Injection incluida
+en la familia — ratificado); **Heartbleed e Infiltration quedan fuera del
+multiclase** y se evalúan aparte a nivel binario, reportadas siempre con su n
+y sin promediarlas. La deduplicación redujo SSH-Patator 45% y PortScan 43%,
+pero ambas conservan miles de casos y siguieron viables. Método ejecutado
+(Fase 3): matriz 2×4 (logística/HistGradientBoosting × sin corrección/pesos/
+SMOTE/submuestreo+SMOTE) con CV estratificada, evaluada con macro-F1, recall
+y precisión por clase, matrices de confusión y curvas PR — nunca accuracy
+(decir "todo es normal" ya acierta 80%).
+
+**Pregunta 3 — No supervisado** (✅ sobrevivió como complementaria): *¿un
+modelo entrenado únicamente con tráfico normal puede señalar como anómalos
+ataques que nunca vio etiquetados?* La habilita un hallazgo del EDA: el lunes
+es 100% benigno (529.918 flujos) y los demás días aportan los 14 ataques como
+evaluación. Advertencias asumidas desde el diseño: los errores de etiquetado
+documentados en la literatura pueden contaminar el "benigno" del lunes (se
+manejó fijando el umbral por cuantiles de los scores del propio lunes —
+0,5%/1%/2%, el equivalente explícito del parámetro de contaminación), y el
+tráfico normal varía entre días, así que las falsas alarmas se reportan POR
+DÍA. Método ejecutado (Fase 4): Isolation Forest como detector principal y
+Local Outlier Factor como contraste, solo scikit-learn.
+
+### Las 6 decisiones de limpieza (aprobadas y aplicadas en la Fase 2) y su porqué
 
 | # | Decisión | Porqué |
 |---|---|---|
@@ -136,12 +177,13 @@ no se detectan sin corrección del desbalance** (figuras
 | Bot | 0,015 | 0,21 | **Atascada**: el modelo lineal no la separa |
 | Web Attack | 0,003 | 0,20 | **Atascada**: ídem |
 
-Esta brecha es exactamente lo que los experimentos de la Fase 3 deben cerrar,
-con el mismo split, CV y features.
+Esta brecha es exactamente la que los experimentos de la Fase 3 debían
+cerrar — y cerraron (ver Fase 3) — con el mismo split, CV y features.
 
-**Decisión documentada pendiente de ratificar:** SQL Injection (21 casos)
-quedó **dentro** de la familia "Web Attack", no como clase excluida
-(`src/etiquetas.py`).
+**Decisión documentada y ratificada:** SQL Injection (21 casos) quedó
+**dentro** de la familia "Web Attack", no como clase excluida
+(`src/etiquetas.py`). La familia agrupa los tres ataques a la aplicación web;
+SQL Injection no se evalúa como subtipo propio por falta de muestras.
 
 ---
 
@@ -193,7 +235,10 @@ la ordenaba bien y el umbral la ahogaba. Cualquier corrección la libera
 DoS slowloris (AP base 0,91) y DoS Slowhttptest (0,85) son análogas.
 
 **2. Las atascadas (Bot y Web Attack, AP base 0,22 y 0,30) NO eran un
-problema de desbalance sino de capacidad del modelo.** Con la logística,
+problema de desbalance sino de capacidad del modelo.** (Los AP de esta
+sección son medias entre las 5 particiones de la Fase 3; el notebook 02
+reporta 0,21 y 0,20 sobre las predicciones agrupadas de la validación cruzada
+— misma señal, estimador distinto.) Con la logística,
 ninguna técnica las desatasca: pesos de clase les sube el recall a 0,99/0,96
 pero con precisión **0,02/0,03** (98 de cada 100 alarmas de Bot serían
 falsas), y SMOTE apenas mueve el AP (Web Attack 0,30 → 0,58). **Los árboles
@@ -226,33 +271,22 @@ puede representar la frontera (árboles 0,948 → 0,970 con pesos).
 
 ### Nota transversal: estrategia de cómputo y reproducibilidad
 
-El proyecto separa deliberadamente el **cómputo pesado** (que se paga una sola
-vez, en la máquina del autor) de la **presentación y verificación** (que debe
-funcionar en cualquier equipo). La razón: no es razonable exigir al jurado o a
-colaboradores un hardware equivalente para evaluar el trabajo.
+Decisión de arquitectura tomada en esta fase: separar el **cómputo pesado**
+(scripts checkpointeados, se paga una sola vez en la máquina del autor) de la
+**presentación** (notebooks e informes que leen resultados condensados en CSVs
+de kilobytes versionados con el repo). El porqué: evaluar el proyecto no debe
+exigir hardware ni re-entrenamientos — los notebooks se entregan ejecutados y
+cualquiera puede regenerar tablas y figuras en segundos. El detalle operativo
+(niveles de consumo, tiempos por paso, requisitos) vive en el
+[README](../README.md).
 
-1. Los entrenamientos costosos viven en scripts (`src/experimentos.py`), no en
-   notebooks. Cada combinación queda **checkpointeada** en `data/interim/fase3/`:
-   si el script se interrumpe o se relanza, no repite lo ya calculado. **No hay
-   ninguna necesidad de volver a correr los experimentos**: sus resultados son
-   deterministas (semilla 42) y quedaron persistidos.
-2. Esos resultados se condensan (`src/resultados.py`) en CSVs de kilobytes en
-   `reports/resultados_fase3/`, que **sí se versionan con el repositorio**. El
-   notebook `03_desbalance.ipynb` se alimenta exclusivamente de ellos: cualquier
-   persona puede re-ejecutarlo en segundos y regenerar todas las tablas y
-   figuras sin re-entrenar nada.
-3. Los notebooks se entregan **ya ejecutados** (outputs embebidos) y este
-   informe contiene las mismas cifras: evaluar el proyecto no requiere correr
-   código en absoluto.
-4. La reproducción completa desde los CSV crudos queda documentada en el README
-   (tiempos por paso, ~8 GB de RAM) como garantía de auditabilidad — es
-   opcional, no un requisito de evaluación.
+### Decisión de la fase (aprobada)
 
-### Decisión propuesta (pendiente de aprobación)
-
-Ratificar **árboles + pesos de clase** como candidato para la única
-evaluación final sobre el test, y proceder con la pregunta 1
-(interpretabilidad) y la pregunta 3 (no supervisado con el lunes benigno).
+**Árboles + pesos de clase** quedó ratificado como el candidato para la única
+evaluación final sobre el test, donde efectivamente confirmó su desempeño
+(macro-F1 0,975 con la regla de operación completa; ver Fase final). Con esa
+decisión tomada, la Fase 4 abordó la pregunta 1 (interpretabilidad) y la
+pregunta 3 (no supervisado con el lunes benigno).
 
 ---
 
@@ -345,16 +379,15 @@ la deriva temporal del tráfico normal es un costo real del enfoque. Scores en
 **Limitaciones documentadas:** posible contaminación del "benigno" del lunes
 (errores de etiquetado en la literatura; mitigado con umbral por cuantiles,
 no descartable); LOF con submuestra por costo; resultados sobre
-entrenamiento (la evaluación en test será única, en la fase final).
+entrenamiento (la evaluación sobre el test fue única, en la fase final).
 
 ### Documentos de entrega
 
-Se creó el **esqueleto** de `reports/informe_final.md` (documento de ENTREGA,
-limpio): solo títulos de sección con marcador "pendiente"; se redactará en la
-fase final, cuando existan la evaluación única sobre el test. Este documento
-(`informe.md`) sigue siendo el de TRABAJO, acumulativo.
+En esta fase se creó el **esqueleto** de `reports/informe_final.md` (el
+informe resumido de entrega), que se redactó completo al cierre de la fase
+final, una vez existió la evaluación única sobre el test.
 
-### Pendiente para la fase final (única evaluación sobre el test)
+### Plan para la fase final (ejecutado tal cual en la fase siguiente)
 
 1. Entrenar el campeón (árboles + pesos, con y sin puerto) sobre TODO el
    entrenamiento y evaluarlo UNA vez sobre `test.parquet`.
@@ -428,6 +461,13 @@ temática (no feature a feature) de los rankings, el indicador `_no_aplica`
 como decisión de limpieza vuelta señal, SQL Injection dentro de la familia
 Web Attack, el punto ciego del no supervisado como límite del enfoque, y la
 sección de limitaciones completa.
+
+### Trabajo futuro (desarrollado en el informe resumido, §6)
+
+Features agregadas por ventana temporal (para los ataques "camuflados" que el
+detector por-flujo no puede ver), calibración de probabilidades antes de fijar
+umbrales de operación (la lección del umbral de Bot), y validación sobre la
+versión corregida del dataset (LYCOS-IDS2017) y sobre tráfico real.
 
 **Proyecto cerrado del lado de cómputo. Regla vigente: los resultados del test
 no se usan para reajustar ningún modelo.**

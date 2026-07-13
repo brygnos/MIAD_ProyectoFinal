@@ -4,10 +4,11 @@ Clasificación de tráfico de red (normal vs tipos de ataque) sobre el dataset
 **CIC-IDS2017**, enmarcada como un problema de **clasificación con desbalance
 de clases e interpretabilidad**.
 
-> 📄 **La fuente de verdad del proyecto es el informe vivo:
-> [reports/informe.md](reports/informe.md)** (hallazgos, decisiones, métricas
-> y limitaciones, fase por fase). Las preguntas de negocio y su evaluación
-> están en [preguntas_de_negocio.md](preguntas_de_negocio.md).
+> **¿Qué leer según quién eres?**
+> - **Jurado / lectura rápida** → [reports/informe_final.md](reports/informe_final.md) (informe resumido, la entrega)
+> - **Todo el detalle y las justificaciones** → [reports/informe.md](reports/informe.md) (informe detallado, fase por fase)
+> - **Reproducir o re-ejecutar** → este README (sección "Cómo consumir el proyecto")
+> - **Estudiar y defender el proyecto** → [docs/guia_proyecto.md](docs/guia_proyecto.md) (material de estudio del autor)
 
 ## Datos
 
@@ -28,9 +29,9 @@ de clases e interpretabilidad**.
 ├── src/             config · carga · calidad · preparacion · limpieza ·
 │                    split · features · etiquetas · experimentos · resultados ·
 │                    interpretabilidad · no_supervisado · evaluacion_final
-└── reports/         informe.md (trabajo) · informe_final.md (entrega) ·
-                     figures/ · resultados_fase3/ · resultados_fase4/ ·
-                     resultados_final/
+└── reports/         informe.md (detallado) · informe_final.md (resumido, la
+                     entrega) · figures/ · resultados_fase3/ ·
+                     resultados_fase4/ · resultados_final/
 ```
 
 ## Setup
@@ -39,17 +40,17 @@ de clases e interpretabilidad**.
 python -m venv .venv
 # Windows: .venv\Scripts\Activate.ps1   |   Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
-python -m ipykernel install --user --name miad-proyecto
+jupyter lab   # lanzarlo desde el venv activo: los notebooks usan su kernel por defecto
 ```
 
 ## Cómo consumir el proyecto (tres niveles)
 
 1. **Leer (no requiere correr nada).** Los notebooks se entregan **ya
-   ejecutados**, con tablas y figuras embebidas, y el informe
-   ([reports/informe.md](reports/informe.md)) contiene los mismos resultados.
-2. **Re-ejecutar los análisis ligeros.** `03_desbalance.ipynb` lee únicamente
-   los CSVs de `reports/resultados_fase3/` (kilobytes, incluidos en el repo):
-   corre en segundos en cualquier equipo.
+   ejecutados**, con tablas y figuras embebidas, y los dos informes
+   (resumido y detallado) contienen los mismos resultados.
+2. **Re-ejecutar los análisis ligeros.** Los notebooks `03` a `06` leen
+   únicamente los CSVs de `reports/resultados_*/` (kilobytes, versionados con
+   el repo): corren en segundos en cualquier equipo, sin re-entrenar nada.
 3. **Reproducción completa desde los CSV crudos** (opcional; requiere ~8 GB de
    RAM y descargar el dataset):
 
@@ -71,11 +72,11 @@ python -m src.evaluacion_final   # 8. ÚNICA evaluación sobre el test     (~2 m
 \* Tiempos medidos en una máquina de 24 núcleos y 32 GB de RAM; en un equipo
 modesto los pasos marcados pueden tomar varias horas en total. Son cómputos de
 **una sola vez**, checkpointeados: si se interrumpen, al relanzar no repiten lo
-ya calculado, y los notebooks no los repiten jamás. Los notebooks (`01_eda`,
-`02_baseline`, `03_desbalance`, `04_interpretabilidad`, `05_no_supervisado`,
-`06_evaluacion_final`) se ejecutan en ese orden con el kernel del entorno; `02_baseline` re-entrena sus
-líneas base (~15 min), los demás leen resultados guardados y corren en
-segundos.
+ya calculado, y los notebooks no los repiten jamás. Los notebooks se ejecutan
+en orden (`01_eda` → `06_evaluacion_final`): **`01` y `02` requieren los datos
+locales** (haber corrido los pasos 1-3; `02` re-entrena sus líneas base,
+~15 min), mientras que **`03` a `06` leen los CSVs versionados** y corren en
+segundos en cualquier equipo.
 
 ## Reproducibilidad
 

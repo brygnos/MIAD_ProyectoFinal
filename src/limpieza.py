@@ -1,9 +1,9 @@
 """Limpieza del dataset consolidado — Fase 2.
 
-Aplica exactamente las 6 decisiones aprobadas en preguntas_de_negocio.md
-(las decisiones 5-parcial y 6 —poda por correlación y split— viven en
-src/features.py y src/split.py porque dependen SOLO del conjunto de
-entrenamiento):
+Aplica exactamente las 6 decisiones de limpieza aprobadas (documentadas en
+reports/informe.md, Fase 0-1; las decisiones 5-parcial y 6 —poda por
+correlación y split— viven en src/features.py y src/split.py porque dependen
+SOLO del conjunto de entrenamiento):
 
 1. Eliminar filas duplicadas (ignorando `archivo_origen`). Motivo: una misma
    fila repetida puede caer a la vez en entrenamiento y en prueba, y el modelo

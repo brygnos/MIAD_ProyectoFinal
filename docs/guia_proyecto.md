@@ -65,9 +65,19 @@ estimación conservadora sin el puerto**; las cifras del test coincidieron con
 las de validación cruzada (0,970→0,967; 0,950→0,942), la evidencia de que no
 hubo sobreajuste ni fuga. Y una lección de humildad que reportamos sin
 maquillar: el umbral de operación de Bot, afinado con entrenamiento, transfirió
-perfecto en la variante con puerto (precisión 0,61→0,947) pero falló en la
+perfecto en la variante con puerto (precisión de ~0,6 sin umbral en
+validación a 0,947 en el test) pero falló en la
 variante sin puerto (cero alarmas) — y como el protocolo prohíbe reajustar tras
 ver el test, quedó reportado como lección sobre calibración de probabilidades.
+
+> **Vocabulario mínimo antes de seguir** (la sección 5 los explica a fondo;
+> esto es solo para que ninguna sigla te frene mientras lees):
+> - **Recall** de una clase: de todos sus casos reales, qué fracción detectó el modelo.
+> - **Precisión** de una clase: de todas las alarmas que dio el modelo para esa clase, qué fracción era correcta.
+> - **Macro-F1**: promedio del F1 (equilibrio recall-precisión) de todas las clases, pesando igual a la más grande y a la más rara.
+> - **AP**: área bajo la curva precision-recall; mide qué tan bien *ordena* el modelo a una clase, independiente del umbral elegido.
+> - **Validación cruzada (estratificada, 5 particiones)**: entrenar 5 veces dejando fuera un quinto de los datos cada vez, y evaluar siempre sobre lo no visto, conservando las proporciones de cada clase.
+> - **Boosting (de árboles)**: cientos de árboles de decisión pequeños encadenados, cada uno corrigiendo los errores del anterior.
 
 ---
 
@@ -310,8 +320,8 @@ n al lado — cifras ilustrativas, no estadística).
 schema archivo por archivo, consolidación a Parquet
 (1.834 MB → 664 MB de RAM con float32) y un EDA
 ([notebook 01](../notebooks/01_eda.ipynb)) que cuantificó el desbalance, la
-calidad y la redundancia. Con eso se escribieron las preguntas de negocio
-(`preguntas_de_negocio.md`) y **se detuvo todo hasta aprobarlas**.
+calidad y la redundancia. Con eso se escribieron y evaluaron las preguntas de negocio (hoy integradas
+en el informe detallado, Fase 0-1) y **se detuvo todo hasta aprobarlas**.
 
 **Por qué así.** La regla del proyecto era no construir modelos hasta validar
 que los datos soportan las preguntas. La alternativa descartada — modelar de
@@ -428,7 +438,8 @@ recall 0,728 en test, diseñado a ~0,93/0,68) pero en la variante sin puerto el
 modelo reentrenado **nunca produjo P(Bot) ≥ 0,999** → cero alarmas de Bot →
 macro-F1 0,888 con la regla. Se reportó tal cual, con su explicación (umbral
 fijado en el extremo de la escala de probabilidad + cambio de modelo = frágil),
-y la cifra honesta de esa variante es su argmax: **0,942**. Reajustar el umbral
+y la cifra honesta de esa variante es la de su regla estándar (argmax: elegir
+la clase más probable): **0,942**. Reajustar el umbral
 después de ver el test habría convertido la "evaluación única" en una segunda
 ronda de ajuste — exactamente lo que el protocolo existe para impedir.
 
@@ -510,8 +521,8 @@ cientos de árboles pequeños en secuencia, cada uno corrigiendo los errores del
 anterior; cada árbol hace cortes tipo "¿`Flow Duration` > x? ¿y `Bwd Packet
 Length Min` < y?" — la composición de cortes talla **regiones** arbitrarias del
 espacio. Por eso los árboles ven lo que la logística no: Bot y Web Attack viven
-en bolsillos del espacio de features que ninguna recta puede aislar (AP 0,21 →
-0,91 y 0,20 → 0,99 al cambiar de modelo). "Hist" = las features se discretizan
+en bolsillos del espacio de features que ninguna recta puede aislar (AP de
+≈ 0,2 a 0,91 en Bot y a 0,99 en Web Attack al cambiar de modelo). "Hist" = las features se discretizan
 en histogramas, lo que hace el entrenamiento rapidísimo (11 s el ajuste base en
 2 millones de filas).
 
@@ -921,8 +932,8 @@ representar la frontera.
 4. La logística solo puede trazar un hiperplano (una "recta" generalizada). El
    boosting compone cientos de cortes tipo "¿feature > x?" que tallan regiones
    arbitrarias: puede aislar los bolsillos del espacio donde viven Bot y Web
-   Attack. Evidencia: AP 0,21 → 0,91 y 0,20 → 0,99 al cambiar de modelo, sin
-   tocar el desbalance.
+   Attack. Evidencia: AP de ≈ 0,2 a 0,91 (Bot) y a 0,99 (Web Attack) al
+   cambiar de modelo, sin tocar el desbalance.
 5. Por calibración: el umbral 0,999 se fijó en el extremo de la escala con
    probabilidades OOF, y el modelo sin puerto reentrenado con todo el train
    nunca produjo probabilidades tan extremas → cero alarmas. Soluciones futuras:
@@ -967,7 +978,8 @@ representar la frontera.
    decidir nada; corregir después de mirarlo lo convierte en validación y la
    cifra final deja de ser creíble. La honestidad del 0,975 con puerto depende
    de haber dejado el 0,888 sin maquillar al lado.
-5. **0,942** (macro-F1 en test, variante sin identificadores, regla argmax; su
+5. **0,942** (macro-F1 en test, variante sin identificadores, con la regla
+   estándar de elegir la clase más probable; su
    CV fue 0,950 ± 0,004). Sale de reentrenar el campeón sin `Destination Port`
    — el único identificador del dataset. Es la honesta porque no depende de que
    cada ataque use su puerto canónico, cosa que solo está garantizada en el

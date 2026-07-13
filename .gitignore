@@ -40,6 +40,14 @@ ENV/
 reports/figures/*
 !reports/figures/.gitkeep
 
+# Excepciones: los resultados agregados (KB) y las figuras SÍ se versionan —
+# alimentan los notebooks 03-06 y los informes (van después de *.csv y de
+# reports/figures/* para ganarles según las reglas de gitignore)
+!reports/resultados_fase3/*.csv
+!reports/resultados_fase4/*.csv
+!reports/resultados_final/*.csv
+!reports/figures/*.png
+
 # ============================================
 # Sistema operativo / editores
 # ============================================
