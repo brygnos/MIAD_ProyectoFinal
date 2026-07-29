@@ -1,0 +1,5 @@
+# Archivos que NO viajan en el zip de entrega (git archive).
+# El repositorio los conserva; solo se excluyen del artefacto exportado.
+CLAUDE.md export-ignore
+.gitattributes export-ignore
+.gitignore export-ignore
