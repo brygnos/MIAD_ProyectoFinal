@@ -61,3 +61,6 @@ Thumbs.db
 # ============================================
 CLAUDE.local.md
 .claude/settings.local.json
+
+# Zips generados (entrega y datos intermedios): nunca versionarlos
+*.zip
