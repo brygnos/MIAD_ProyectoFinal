@@ -4,7 +4,7 @@
 > **Este es el informe RESUMIDO** — la versión de entrega, para lectura
 > rápida. Cuenta todo lo que se hizo; el desarrollo completo de cada fase,
 > decisión y justificación está en el **informe detallado**
-> ([informe.md](informe.md)): ambos documentos son la misma historia a
+> ([bitacora_proyecto.md](bitacora_proyecto.md)): ambos documentos son la misma historia a
 > distinta profundidad. Los notebooks 01-06 contienen todas las tablas y
 > figuras ya ejecutadas, y los resultados numéricos completos viven en CSVs
 > versionados (`reports/resultados_*/`).

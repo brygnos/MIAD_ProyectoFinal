@@ -32,12 +32,12 @@ NOMBRE_NORMAL = "Normal"
 # sigue sirviendo un diccionario de recursos anterior aunque el código ya
 # haya cambiado, y las pantallas fallan con un KeyError críptico.
 # SUBIR ESTE NÚMERO al agregar, quitar o renombrar una clave del diccionario.
-VERSION_RECURSOS = "2"
+VERSION_RECURSOS = "3"
 
 # Claves que las pantallas dan por sentadas (se verifican al arrancar)
 CLAVES_REQUERIDAS = frozenset({
     "multiclase", "binario", "detector", "meta", "metricas_clase",
-    "confusion", "importancia", "version_sklearn_activa",
+    "confusion", "importancia", "falsas_alarmas_dia", "version_sklearn_activa",
     "version_sklearn_modelos",
 })
 
@@ -75,8 +75,13 @@ def cargar_recursos(version: str = VERSION_RECURSOS) -> dict:
 
     importancia = pd.read_csv(RUTA_RESULTADOS_FASE4 / "q1_importancia_permutacion.csv")
 
+    # R11: tasa de falsas alarmas del detector desagregada por día/tramo, en la
+    # evaluación final sobre el test. Es la evidencia de la deriva temporal.
+    falsas_alarmas_dia = pd.read_csv(RUTA_RESULTADOS / "final_iforest_fp_dia.csv")
+
     return {
         "importancia": importancia,
+        "falsas_alarmas_dia": falsas_alarmas_dia,
         "multiclase": joblib.load(RUTA_MODELOS / "modelo_multiclase.joblib"),
         "binario": joblib.load(RUTA_MODELOS / "modelo_binario.joblib"),
         "detector": joblib.load(RUTA_MODELOS / "detector_anomalias.joblib"),

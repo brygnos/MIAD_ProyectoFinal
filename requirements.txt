@@ -12,3 +12,6 @@ pandas==2.3.3
 numpy==2.5.1
 joblib==1.5.3
 shap==0.52.0
+
+# Pruebas de requerimientos (python -m pytest desde la raíz)
+pytest==9.1.1

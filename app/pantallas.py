@@ -284,6 +284,36 @@ def pantalla_clasificacion(recursos, estado) -> None:
         st.dataframe(confusion, width="stretch")
 
 
+def _tabla_falsas_alarmas_dia(recursos, etiqueta_cuantil: str) -> pd.DataFrame:
+    """Tasa de falsas alarmas del detector por día/tramo al umbral elegido (R11).
+
+    Lee el CSV de la evaluación final (test); traduce el nombre del archivo
+    crudo a un nombre de tramo legible, en orden cronológico."""
+    umbral_pct = float(nucleo.CUANTILES[etiqueta_cuantil]) * 100
+    df = recursos["falsas_alarmas_dia"]
+    df = df[np.isclose(df["umbral_pct"], umbral_pct)].copy()
+    nombres = {
+        "Monday-WorkingHours.pcap_ISCX.csv": "Lunes (día de calibración)",
+        "Tuesday-WorkingHours.pcap_ISCX.csv": "Martes",
+        "Wednesday-workingHours.pcap_ISCX.csv": "Miércoles",
+        "Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv": "Jueves — mañana",
+        "Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv": "Jueves — tarde",
+        "Friday-WorkingHours-Morning.pcap_ISCX.csv": "Viernes — mañana",
+        "Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv": "Viernes — tarde (1)",
+        "Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv": "Viernes — tarde (2)",
+    }
+    orden = list(nombres)
+    df["orden"] = df["dia"].map({d: i for i, d in enumerate(orden)})
+    df = df.sort_values("orden")
+    return pd.DataFrame(
+        {
+            "Día / tramo": df["dia"].map(nombres).fillna(df["dia"]),
+            "Flujos normales evaluados": df["n_benignos"].astype(int),
+            "Falsas alarmas": df["tasa_falsas_alarmas"].astype(float),
+        }
+    ).reset_index(drop=True)
+
+
 # ---------------------------------------------------------------- anomalías ---
 def pantalla_anomalias(recursos, estado) -> None:
     st.header("Detección de anomalías")
@@ -374,11 +404,47 @@ def pantalla_anomalias(recursos, estado) -> None:
         "presupuesto de falsas alarmas en 1%: el detector encontró el 89% de "
         "los flujos de Heartbleed, el 52% de slowloris y el 48% de "
         "Infiltration — sin haber visto jamás un ataque etiquetado — y un "
-        "11,8% de los ataques en general (por el punto ciego de arriba). Las "
-        "falsas alarmas reales rondaron el 1% prometido casi todos los días, "
-        "con una excepción honesta: un tramo del viernes subió a 9,6%, porque "
-        "el tráfico normal también cambia con el tiempo (si se usara en "
-        "producción, habría que recalibrarlo periódicamente)."
+        "11,8% de los ataques en general (por el punto ciego de arriba)."
+    )
+
+    # ---- R11: falsas alarmas desagregadas por día (deriva temporal) ----
+    st.markdown("**Falsas alarmas por día: la señal de deriva**")
+    st.caption(
+        "Fuente: la evaluación final sobre el conjunto de prueba (flujos que el "
+        "detector nunca vio). La tabla sigue al presupuesto elegido arriba: "
+        f"ahora mismo, {umbral}."
+    )
+    tabla_dia = _tabla_falsas_alarmas_dia(recursos, umbral)
+    st.dataframe(
+        tabla_dia.style.format({"Falsas alarmas": "{:.1%}"}),
+        hide_index=True,
+        width="stretch",
+        column_config={
+            "Falsas alarmas": st.column_config.ProgressColumn(
+                "Falsas alarmas", min_value=0.0,
+                max_value=float(max(0.12, tabla_dia["Falsas alarmas"].max())),
+                format="%.1f%%",
+            )
+        },
+    )
+    peor = tabla_dia.loc[tabla_dia["Falsas alarmas"].idxmax()]
+    peor_pct = f"{peor['Falsas alarmas']:.1%}".replace(".", ",")  # 9,6% en prosa
+    veces = round(peor["Falsas alarmas"] / float(nucleo.CUANTILES[umbral]))
+    st.markdown(
+        "**Cómo leerla y por qué importa.** El detector se calibró con el "
+        "tráfico del **lunes**, que es 100% benigno: aprendió cómo se ve lo "
+        "normal *ese día*. Cuando el tráfico normal de otro día se comporta "
+        "distinto, el detector lo ve raro y las falsas alarmas suben aunque "
+        "no haya ningún ataque. Eso se llama **deriva**: el tráfico normal "
+        "cambia con el tiempo. En la tabla, casi todos los tramos quedan "
+        f"cerca del presupuesto elegido, pero el tramo *{peor['Día / tramo']}* "
+        f"llegó a **{peor_pct}** con un presupuesto del {umbral}: casi "
+        f"{veces} veces más falsas alarmas de las aceptadas. "
+        "**La lección para un despliegue real:** un detector así no se "
+        "calibra una vez y se olvida; hay que medir esta tabla periódicamente "
+        "y **recalibrar** (re-entrenar con tráfico normal reciente) cuando la "
+        "tasa se aleje del presupuesto. Esa medición continua es lo que "
+        "permitiría decidir *cuándo* re-entrenar, en vez de adivinarlo."
     )
 
 

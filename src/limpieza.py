@@ -1,7 +1,7 @@
 """Limpieza del dataset consolidado — Fase 2.
 
 Aplica exactamente las 6 decisiones de limpieza aprobadas (documentadas en
-reports/informe.md, Fase 0-1; las decisiones 5-parcial y 6 —poda por
+reports/bitacora_proyecto.md, Fase 0-1; las decisiones 5-parcial y 6 —poda por
 correlación y split— viven en src/features.py y src/split.py porque dependen
 SOLO del conjunto de entrenamiento):
 

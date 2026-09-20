@@ -1,10 +1,11 @@
-# Informe detallado del proyecto — Detección de tráfico de red malicioso (CIC-IDS2017)
+# Bitácora del proyecto — Detección de tráfico de red malicioso (CIC-IDS2017)
 
-> **Este es el informe DETALLADO:** la historia técnica completa del proyecto,
-> organizada por fases, con todas las decisiones, sus justificaciones, las
-> cifras y las limitaciones. La **versión resumida** (la entrega, para lectura
-> rápida) es [informe_final.md](informe_final.md); ambos documentos cuentan la
-> misma historia a distinta profundidad.
+> **Qué es este documento.** La evidencia del proceso: qué se hizo en cada
+> fase, qué se decidió, por qué, y qué se encontró por el camino (incluidos
+> los errores y cómo se corrigieron). Se queda en el repositorio de trabajo y
+> **no viaja a la entrega**. Los documentos de entrega son el reporte técnico
+> (`reporte_tecnico_experimentos.pdf`) y el informe resumido
+> (`informe_final.md`).
 >
 > Proyecto de tesis — Maestría en Inteligencia Analítica de Datos. El problema
 > se aborda como **clasificación con desbalance de clases e interpretabilidad**;
@@ -471,3 +472,203 @@ versión corregida del dataset (LYCOS-IDS2017) y sobre tráfico real.
 
 **Proyecto cerrado del lado de cómputo. Regla vigente: los resultados del test
 no se usan para reajustar ningún modelo.**
+
+
+---
+
+## Fase A — Artefactos del prototipo (septiembre de 2026)
+
+El proyecto pivotó de tesis analítica a **prototipo entregable**: un tablero
+web donde un analista carga un archivo de flujos y obtiene, por flujo, si es
+ataque, de qué tipo, con qué confianza y por qué. La fuente de verdad del
+tablero es `docs/especificacion_prototipo.md` (22 requerimientos, 6 pantallas,
+cifras oficiales en su §10). El análisis quedó cerrado: nada de esta fase
+recalculó cifras ni tocó el conjunto de prueba.
+
+### Modelos serializados (`models/`, `src/modelo_final.py`)
+
+Se re-entrenaron con todo el entrenamiento y se guardaron con `joblib`
+(compresión 3): `modelo_multiclase.joblib` (HistGB + pesos, 11 clases,
+0,7 MB), `modelo_binario.joblib` (0,2 MB) y `detector_anomalias.joblib`
+(Isolation Forest + `StandardScaler` ajustado solo con el lunes benigno +
+umbrales por cuantiles 0,5 / 1 / 2 %; 0,4 MB), más `metadatos.json` (lista
+ordenada de las 48 características, nombres de clases, umbral de Bot 0,999 y
+su regla, versión de scikit-learn, semilla). Total 1,3 MB. **Determinismo
+verificado:** los umbrales del detector re-entrenado coinciden decimal a
+decimal con los del checkpoint de la evaluación final.
+
+### Archivos de demostración (`data/demo/`, `src/preparar_demo.py`)
+
+Dos muestras estratificadas del **conjunto de prueba** (el modelo nunca las
+vio): `flujos_demo.csv` (499 flujos, 39,9 % de ataque, los 14 tipos) para
+mostrar todo lo que se detecta, y `flujos_demo_realista.csv` (500 flujos,
+5,0 % de ataque) para mostrar cuánto trabajo ahorra. Ambas en el esquema
+crudo completo de CICFlowMeter (78 columnas con sus espacios, la columna
+repetida, el −1 restaurado), sin la columna de etiqueta; las etiquetas van
+aparte en archivos que el tablero nunca lee. `.gitignore` las exceptúa de la
+regla `*.csv`.
+
+### Decisiones técnicas de la fase
+
+- **Explicación por alerta (R3): SHAP `TreeExplainer`** soporta el HistGB
+  multiclase: 0,12 s de inicialización, 2 ms por flujo, y en el 100 % de los
+  flujos probados la clase más empujada coincide con la predicha. Costo:
+  ~100 MB de memoria por numba/llvmlite (cabe en 1 GB). Plan B documentado:
+  desviación del flujo frente al rango benigno (sin dependencias).
+- **R9 medido en local:** 10.000 / 50.000 / 100.000 flujos en 0,2 / 0,8 /
+  1,6 s por el camino completo; pico 392 MB. En una repetición posterior:
+  0,7 s y 390 MB. La medición definitiva se repite sobre el tablero
+  desplegado (así lo dice la prueba prevista de R9).
+- **Entornos separados:** `requirements.txt` liviano para la app (streamlit,
+  scikit-learn 1.9.0, pandas, numpy, joblib, shap, pytest) y
+  `requirements-analisis.txt` con el `pip freeze` completo del análisis.
+  Regla no negociable: **scikit-learn idéntico en ambos**, porque de esa
+  versión depende que los `.joblib` carguen; el tablero verifica la versión al
+  arrancar. Despliegue con Python 3.13.
+- **Licencias:** todas las dependencias son BSD / MIT / Apache 2.0 / PSF.
+  Cita obligatoria del dataset (texto exigido por su proveedor): *Iman
+  Sharafaldin, Arash Habibi Lashkari, and Ali A. Ghorbani, "Toward Generating
+  a New Intrusion Detection Dataset and Intrusion Traffic Characterization",
+  4th International Conference on Information Systems Security and Privacy
+  (ICISSP), Portugal, January 2018.*
+- **Entorno mínimo:** usuario final, navegador de escritorio y la URL; para
+  reproducir el análisis, Python 3.13, versiones exactas y ~8 GB de memoria
+  (el tablero solo necesita ~1 GB).
+
+---
+
+## Fase B — Construcción del tablero (Streamlit)
+
+Seis pantallas en un enrutador de una sola página (`streamlit_app.py` +
+`app/{nucleo,validacion,pantallas}.py`): Panel de resumen, Clasificación,
+Detección de anomalías, Interpretabilidad, Alertas y Reportes. Los modelos se
+cargan una vez por servidor (`st.cache_resource`) y nada del archivo del
+usuario se escribe a disco.
+
+### Decisiones de diseño
+
+- **El KPI de negocio primero (R5):** el panel de resumen encabeza con la
+  reducción de la carga de revisión (con la demo realista: 500 flujos → 23
+  alertas → 95,4 % menos revisión) y, obligatoriamente al lado, la frase que
+  declara el intercambio: sin herramienta se revisa todo y no se escapa nada
+  a costa de un trabajo inviable; con herramienta se revisa una fracción y
+  se acepta que algo pueda pasar.
+- **Una alerta es un flujo cuya clase final ≠ Normal** según el modelo oficial
+  (multiclase + regla de Bot). El binario y la marca de anomalía son columnas
+  complementarias, no definen la alerta.
+- **El umbral del detector es un presupuesto de falsas alarmas** (0,5 / 1 /
+  2 %, calibrado con el lunes benigno). El deslizador vive en la pantalla de
+  anomalías y su valor rige también la marca de anomalía en Alertas y en el
+  Panel de resumen. Con la demo rica: 8 / 22 / 36 anómalos.
+- **Interpretabilidad en dos niveles y dos modelos distintos:** la importancia
+  global se midió sobre el modelo **binario** (ataque sí/no) y la explicación
+  por alerta (SHAP) sobre el **multiclase**; la pantalla lo dice
+  explícitamente después de detectar que la primera versión los presentaba
+  como si fueran el mismo modelo. La tabla global se muestra ordenada y con
+  nombres en lenguaje llano (glosario de las 48 características).
+- **Las filas con valores inválidos se excluyen y se nombran**, no se imputan.
+- **Tres modelos, no uno:** las pantallas de Clasificación y Alertas explican
+  que el multiclase aprendió 10 tipos y no 14 (Heartbleed e Infiltration son
+  demasiado escasos); si aparecen, su tipo asignado será incorrecto por
+  construcción, pero el binario y el detector de anomalías pueden atraparlos.
+- **Lo que deliberadamente no tiene** (declarado en pantalla): exportación en
+  PDF, historial entre sesiones, columna de severidad, tiempo real.
+
+### Errores encontrados probando en un navegador real (no en el código)
+
+1. Al elegir una demo con un archivo ya subido, el archivo subido volvía a
+   imponerse al cambiar de pantalla. Causa: se limpiaba el estado del cargador
+   en vez de marcar el archivo como atendido. Corregido y verificado con una
+   subida real.
+2. El deslizador del umbral se dibujaba en 0,5 % mientras el sistema usaba
+   1 %: Streamlit no refleja un `session_state` preinicializado en la posición
+   del control. Corregido dando el valor por defecto al propio widget.
+3. `KeyError: 'importancia'` en una segunda instancia del servidor que llevaba
+   dos horas corriendo: **`st.cache_resource` no se invalida cuando cambia el
+   código**, así que servía un diccionario de recursos anterior a pantallas
+   nuevas. Solución de fondo: el caché se versiona (`VERSION_RECURSOS`, que se
+   pasa como argumento a la función cacheada) y el arranque verifica las
+   claves requeridas y muestra un mensaje accionable en vez del error. Regla
+   operativa: al tocar `app/*.py` o `models/` hay que reiniciar el servidor,
+   no basta con recargar la página.
+4. `use_container_width` estaba obsoleto (retirado tras 2025-12-31);
+   reemplazado por `width="stretch"` en los 11 usos.
+
+### Verificaciones de usabilidad
+
+Recorrido sin archivo cargado en las seis pantallas sin excepciones y con
+estado vacío explicado; archivo inválido bloqueado con mensaje en llano
+("Faltan 43 de las 46 características…"); todo resultado clave a ≤ 3 clics;
+auditoría de 14 términos técnicos, todos con glosa; arranque en caliente
+1,3 s, en frío ~35 s.
+
+---
+
+## Fase C — Verificación del reporte técnico y cierre del tablero
+
+### El reporte técnico del Módulo 2 (`reporte_tecnico_experimentos.pdf`)
+
+Escrito en LaTeX (fuente en `reporte_tecnico_experimentos.tex`, compilado con
+Tectonic porque la máquina no tiene LaTeX; alternativa: Overleaf). Antes de
+entregarlo se contrastó cada afirmación con el código y los datos:
+
+- **Local Outlier Factor, confirmado con cifras** (recall al 1 %, evaluación
+  sobre la semana): ve la fuerza bruta contra SSH que el Isolation Forest no
+  ve (0,906 frente a 0,000) pero **no** la de FTP (ambos 0,000); pierde
+  Heartbleed (0,000 frente a 0,889) y slowloris (0,000 frente a 0,520); su
+  recall global es un tercio del elegido (0,035 frente a 0,118). Por eso la
+  frase dice "contra SSH" y no "la fuerza bruta".
+- **Tres cifras corregidas:** "27 pruebas" eran **25**; "500 flujos de demo"
+  eran **499 y 500**; "0,8 s / 392 MB" se reformuló como "menos de un segundo
+  (0,7–0,8 s) y pico cercano a 390 MB", porque una medición de tiempo varía
+  entre ejecuciones y la formulación con rango resiste que la repitan.
+- La versión definitiva del PDF incorpora las ediciones hechas en Overleaf
+  (usuario que conoce redes pero no programa; aclaración de que el 83 % de
+  benigno es tras deduplicar y el 80,3 % en crudo; "por primera y única vez";
+  licencias sin código de requerimiento; sección de calibración de
+  hiperparámetros). **El `.tex` del repositorio es anterior a esas
+  ediciones**: la fuente actualizada debe exportarse desde Overleaf.
+
+### Los scripts de prueba se perdieron y se reconstruyeron desde la tabla
+
+Los 25 casos originales vivían en una carpeta temporal fuera del repositorio
+—justo el riesgo declarado en el reporte— y una limpieza automática los borró
+el 14 de septiembre. Se reescribieron en `tests/`, esta vez **mapeados uno a
+uno contra la columna "Prueba prevista" de la tabla de requerimientos**
+(R1–R22): 19 automatizadas y 6 manuales documentadas como omitidas con su
+razón (R10, R16, R19, R20, R21-humana, R22), 25 en total. Un solo comando:
+`python -m pytest -v`. Hallazgo al escribirlas: `preparar_demo.py` también
+lee el conjunto de prueba —legítimamente, para muestrear la demo (§6 de la
+especificación)—; la aserción anti-fuga de R8 quedó formulada como "ningún
+módulo salvo `evaluacion_final.py` calcula métricas con el test".
+
+### R11 expuesto en el tablero
+
+La pantalla de anomalías muestra la tasa de falsas alarmas del detector por
+día/tramo (8 tramos, del CSV de la evaluación final), siguiendo el umbral
+elegido, con la explicación de la deriva: el detector se calibró con el lunes;
+cuando el tráfico normal de otro día se comporta distinto, las falsas alarmas
+suben (un tramo del viernes llegó a 9,6 % frente al ~1 % esperado), y esa
+tabla medida periódicamente es lo que permitiría decidir cuándo re-entrenar.
+
+### Orden documental
+
+`informe.md` pasó a llamarse `bitacora_proyecto.md` (este documento; no viaja
+a la entrega). El reporte del Módulo 2 pasó a `reporte_tecnico_experimentos`
+y se retiraron la versión previa y los duplicados. `notas_equipo.md` se
+retiró: su contenido factual vive ahora en las Fases A, B y C de esta
+bitácora; el material presentable que listaba está en la sección siguiente.
+
+### Material para la presentación (reunido de las notas del equipo)
+
+- La reducción de la carga de revisión (95,4 % con la demo realista) con su
+  frase de intercambio: la diapositiva de propuesta de valor.
+- La perilla del detector como "presupuesto de falsas alarmas".
+- La explicación por alerta con SHAP: responde a "¿y por qué le creo al modelo?".
+- La prueba del puerto (0,970 → 0,950; 0,967 → 0,942 en test): responde a
+  "¿no estará haciendo trampa?".
+- La comparación de los dos detectores (ven cosas casi opuestas).
+- 50.000 flujos en menos de un segundo frente a 30 prometidos.
+- Los errores encontrados y corregidos: muestran que se probó de verdad.
+- El determinismo bit a bit de los modelos empaquetados y la honestidad de la
+  demo (flujos nunca vistos, etiquetas en un archivo que el tablero no lee).

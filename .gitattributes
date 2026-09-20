@@ -3,3 +3,7 @@
 CLAUDE.md export-ignore
 .gitattributes export-ignore
 .gitignore export-ignore
+# Documentos de trabajo: en el repositorio, fuera del zip de entrega
+reports/bitacora_proyecto.md export-ignore
+reports/reporte_tecnico_experimentos.tex export-ignore
+docs/guia_proyecto.md export-ignore
