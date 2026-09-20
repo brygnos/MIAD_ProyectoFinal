@@ -1,0 +1,711 @@
+% =====================================================================
+% Reporte de implementación y experimentos — Módulo 2
+% Proyecto Aplicado en Analítica de Datos (MIAD)
+%
+% Compilar con:   tectonic -X compile informe_modulo2.tex
+%            o:   pdflatex informe_modulo2.tex   (dos veces)
+% Las figuras se leen de ./figures/ (rutas relativas a este archivo).
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+% NOTA: los signos de apertura se escriben como \textquestiondown{} y
+% \textexclamdown{}; el carácter literal no se compone bien con esta
+% combinación de codificación y fuentes.
+\usepackage[spanish,es-nodecimaldot,es-noshorthands]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric}
+\usepackage[hidelinks]{hyperref}
+
+\captionsetup{font=small, labelfont=bf}
+\setlist{itemsep=2pt, topsep=3pt}
+\renewcommand{\arraystretch}{1.15}
+\emergencystretch=1.5em
+\hyphenation{His-t-Gra-dient-Boos-ting In-ter-pre-ta-bi-li-dad re-que-ri-mien-to}
+
+% Columnas de ancho fijo con alineación superior
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+
+\title{\vspace{-1.2cm}\textbf{Reporte de implementación y experimentos}\\[0.25cm]
+\large Detección de tráfico de red malicioso mediante clasificación\\
+\large con desbalance extremo de clases e interpretabilidad}
+\author{Proyecto Aplicado en Analítica de Datos --- Módulo 2}
+\date{Septiembre de 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+\noindent
+Este reporte documenta la implementación y los experimentos del prototipo de
+detección de tráfico de red malicioso sobre el conjunto de datos CIC-IDS2017.
+Se describen: (i) los modelos seleccionados y su correspondencia con los
+requerimientos aprobados; (ii) las alternativas evaluadas con sus ventajas y
+desventajas; (iii) la verificación de los supuestos de cada familia de
+modelos y el tratamiento previo de los datos que cada una exige; (iv) el
+protocolo de entrenamiento, validación y parametrización, con la
+justificación de las métricas empleadas; (v) el análisis de resultados y los
+ajustes implementados a partir de él; y (vi) el estado de implementación del
+prototipo y el plan para completarlo. El modelo seleccionado alcanza un
+macro-F1 de 0,975 sobre el conjunto de prueba, manteniendo las falsas alarmas
+en 0,12\% del tráfico benigno; la estimación conservadora, que no depende del
+puerto de destino, es de 0,942.
+\end{abstract}
+
+\vspace{0.3cm}
+
+% =====================================================================
+\section{Contexto y alcance}
+% =====================================================================
+
+\textbf{Problema.} Un centro de operaciones de seguridad (SOC) recibe cientos
+de miles de \emph{flujos de red} por día. Un flujo es una conversación entre
+dos computadores resumida en medidas numéricas (cuántos paquetes, de qué
+tamaño, con qué ritmo, cuánto duró), sin acceso al contenido de la
+comunicación. Revisarlos manualmente es inviable y las reglas por firma no
+reconocen ataques nuevos.
+
+\textbf{Usuario objetivo.} Analista de seguridad sin conocimientos profundos
+de redes ni de programación, que necesita \emph{priorizar} qué flujos
+investigar y disponer de una razón que pueda justificar ante terceros.
+
+\textbf{Datos.} CIC-IDS2017 (Canadian Institute for Cybersecurity;
+Sharafaldin et al., 2018): una semana
+simulada de tráfico corporativo, con 2.830.743 flujos etiquetados como
+benignos (80,3\%) o como uno de 14 tipos de ataque (19,7\%). El desbalance es
+extremo: la clase más frecuente supera a la más rara en una razón de
+206.645 a 1.
+
+\textbf{Encuadre analítico.} El problema se aborda como uno de
+\textbf{clasificación con desbalance de clases e interpretabilidad}, no como
+un problema de seguridad ofensiva.
+
+% =====================================================================
+\section{Modelos propuestos y su correspondencia con los requerimientos}
+% =====================================================================
+
+\subsection{Del requerimiento al modelo}
+
+Los requerimientos aprobados se agrupan en tres preguntas analíticas, y cada
+una determina una familia de modelos distinta. El
+Cuadro~\ref{tab:req-modelo} hace explícita esa correspondencia.
+
+\begin{table}[H]
+\centering
+\caption{Correspondencia entre requerimientos, pregunta analítica y modelo.}
+\label{tab:req-modelo}
+\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{tabular}{L{1.5cm} L{4.3cm} L{3.6cm} L{4.6cm}}
+\toprule
+\textbf{Req.} & \textbf{Requerimiento} & \textbf{Pregunta analítica} & \textbf{Modelo que responde} \\
+\midrule
+R1, R6, R14 & Clasificar el tipo de ataque pese al desbalance, con desempeño accionable &
+\textquestiondown{}De qué tipo es este ataque? & Clasificador multiclase supervisado (11 clases) \\
+R2 & Reducir falsas alarmas para disminuir la fatiga de alertas &
+\textquestiondown{}Cuántas alarmas falsas genera? & El mismo multiclase, evaluado por precisión y recall por clase \\
+R3 & Explicar en qué se basa el modelo &
+\textquestiondown{}Por qué se marcó esta alerta? & Técnicas de interpretabilidad aplicadas al clasificador: lectura global e individual \\
+R4 & Detectar comportamientos anómalos no etiquetados &
+\textquestiondown{}Esto es raro, aunque no sepa qué es? & Detector de anomalías no supervisado \\
+R5 & Demostrar valor frente al escenario sin herramienta &
+\textquestiondown{}Cuánto trabajo ahorra? & Comparación contra clasificador trivial y contra revisión manual \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Integración de los tres modelos}
+
+La solución no es un modelo sino \textbf{tres modelos que se complementan},
+porque ninguno cubre solo todo el espacio del problema. La
+Figura~\ref{fig:arquitectura} muestra cómo se integran.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  node distance=0.7cm and 1.1cm,
+  caja/.style={draw, rounded corners, align=center, minimum height=1.0cm,
+               minimum width=3.1cm, font=\small},
+  datos/.style={caja, fill=black!5},
+  modelo/.style={caja, fill=blue!8},
+  salida/.style={caja, fill=green!8},
+  flecha/.style={-{Stealth[length=2mm]}, thick}
+]
+\node[datos] (entrada) {Archivo de flujos\\(esquema CICFlowMeter)};
+\node[datos, right=of entrada] (prep) {Validación y\\preparación};
+
+\node[modelo, right=1.6cm of prep, yshift=1.5cm] (multi) {Clasificador\\multiclase};
+\node[modelo, right=1.6cm of prep] (bin) {Clasificador\\binario};
+\node[modelo, right=1.6cm of prep, yshift=-1.5cm] (iso) {Detector de\\anomalías};
+
+\node[salida, right=1.4cm of bin] (salida) {Alerta priorizada\\con explicación};
+
+\draw[flecha] (entrada) -- (prep);
+\draw[flecha] (prep) -- (multi);
+\draw[flecha] (prep) -- (bin);
+\draw[flecha] (prep) -- (iso);
+\draw[flecha] (multi) -- (salida);
+\draw[flecha] (bin) -- (salida);
+\draw[flecha] (iso) -- (salida);
+
+\node[font=\scriptsize, right=0.1cm of multi, xshift=1.0cm, yshift=0.55cm]
+  {tipo de ataque};
+\node[font=\scriptsize, above=0.05cm of salida, yshift=-0.1cm] {};
+\end{tikzpicture}}
+\caption{Arquitectura de la solución: los tres modelos operan sobre el mismo
+flujo preparado y sus salidas se combinan en una única alerta. El multiclase
+aporta el tipo de ataque; el binario, un veredicto robusto de ataque/no
+ataque que cubre las clases que el multiclase no pudo aprender; el detector
+de anomalías, comportamientos raros sin necesidad de etiquetas.}
+\label{fig:arquitectura}
+\end{figure}
+
+La razón de fondo para usar tres modelos es una limitación de los datos que
+se documenta más adelante (Sección~\ref{sec:ajustes}): dos tipos de ataque
+--- Heartbleed (11 casos) e Infiltration (36 casos) --- son demasiado escasos
+para aprenderse como clases propias. El clasificador binario y el detector de
+anomalías cubren ese vacío desde ángulos distintos.
+
+\paragraph{Qué se despliega y qué queda en el análisis.}
+No todo lo evaluado forma parte del artefacto. Conviene distinguir dos
+categorías para evitar confusión:
+
+\begin{itemize}
+\item \textbf{Modelos desplegados en el artefacto (tres).} El clasificador
+multiclase y el clasificador binario, ambos \emph{predictivos} (asignan una
+etiqueta a cada flujo); y el detector de anomalías, \emph{descriptivo}, en
+tanto no predice una etiqueta conocida sino que señala desviaciones respecto
+del patrón de tráfico normal.
+\item \textbf{Herramientas de análisis e interpretación (no desplegadas como
+modelos).} La regresión logística, usada como referencia interpretable para
+verificar el supuesto de linealidad; el Local Outlier Factor, usado como
+contraste del detector de anomalías; y las técnicas de interpretabilidad
+---importancia por permutación y SHAP---, que son \emph{descriptivas}: no
+producen una predicción propia sino que explican la del clasificador.
+\end{itemize}
+
+% =====================================================================
+\section{Alternativas evaluadas: ventajas y desventajas}
+% =====================================================================
+
+Para cada requerimiento se plantearon alternativas y se llevaron a un plan de
+pruebas comparativo. El Cuadro~\ref{tab:alternativas} resume el análisis
+previo; la Sección~\ref{sec:resultados} reporta cuál ganó y por qué.
+
+\begin{table}[H]
+\centering
+\caption{Alternativas consideradas por requerimiento, con ventajas y desventajas.}
+\label{tab:alternativas}
+\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{tabular}{L{1.0cm} L{3.0cm} L{5.0cm} L{5.0cm}}
+\toprule
+\textbf{Req.} & \textbf{Alternativa} & \textbf{Ventajas} & \textbf{Desventajas} \\
+\midrule
+R1 & Regresión logística & Coeficientes directamente legibles; entrenamiento simple; sirve de referencia honesta & Supone frontera lineal; exige escalado y control de colinealidad \\
+R1 & \textbf{HistGradient\-Boosting} & Captura relaciones no lineales; no requiere escalado; muy rápido con datos tabulares grandes & Menos transparente: exige técnicas externas de interpretación \\
+\midrule
+R1 & Sin corrección de desbalance & No introduce sesgo artificial; sirve como control & Las clases minoritarias quedan ignoradas \\
+R1 & Pesos de clase & Barato; no fabrica datos; ataca la función de pérdida & Si el modelo no puede separar, solo multiplica falsas alarmas \\
+R1 & SMOTE (sobremuestreo sintético) & Densifica la clase rara donde ya existe & No crea información nueva; inútil con muy pocos casos \\
+R1 & Submuestreo + SMOTE & Reduce costo de cómputo; equilibra el conjunto & Descarta información real; resultó inestable \\
+\midrule
+R4 & \textbf{Isolation Forest} & Escala bien; sin etiquetas; umbral interpretable por cuantiles & Ciego a ataques cuya anomalía está en el agregado \\
+R4 & Local Outlier Factor & Densidad local en lugar de aislamiento: ve la fuerza bruta contra SSH, que el Isolation Forest no detecta (recall 0,91 frente a 0,00) & Costo de predicción alto; pierde Heartbleed (0,00 frente a 0,89) y los DoS lentos (slowloris 0,00 frente a 0,52); su recall global es un tercio del elegido (0,035 frente a 0,118) \\
+\midrule
+R3 & Importancia por permutación & Agnóstica al modelo; se mide sobre datos no vistos & Solo explica el comportamiento global, no la alerta individual \\
+R3 & \textbf{SHAP (TreeExplainer)} (Lundberg y Lee, 2017) & Explica cada alerta con fundamento matemático; 2\,ms por flujo & Añade dependencias pesadas ($\approx$100\,MB de memoria) \\
+R3 & Desviación vs. rango benigno & Sin dependencias; muy simple de explicar & Describe qué es raro, no qué miró el modelo \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.15cm}
+{\footnotesize\noindent En \textbf{negrilla}, la alternativa seleccionada
+para cada requerimiento tras las pruebas comparativas de la
+Sección~\ref{sec:resultados}.}
+\end{table}
+
+\noindent\textbf{Diseño del plan de pruebas.} Las alternativas de R1 se
+cruzaron en una \textbf{matriz de dos ejes} (2 familias de modelo $\times$ 4
+técnicas de desbalance = 8 combinaciones), evaluadas todas bajo condiciones
+idénticas. El diseño no es casual: separar los ejes permite \emph{atribuir
+cada mejora a su causa} y distinguir si un problema se debe al desbalance o a
+la capacidad del modelo. Como se verá, esa distinción resultó ser el hallazgo
+central del proyecto.
+
+% =====================================================================
+\section{Verificación de supuestos y tratamiento previo de los datos}
+% =====================================================================
+
+Cada familia de modelos impone supuestos distintos sobre los datos. El
+Cuadro~\ref{tab:supuestos} documenta qué se verificó y qué tratamiento se
+aplicó en consecuencia.
+
+\begin{table}[H]
+\centering
+\caption{Supuestos por familia de modelo, verificación realizada y tratamiento aplicado.}
+\label{tab:supuestos}
+\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{tabular}{L{2.3cm} L{3.2cm} L{4.5cm} L{4.0cm}}
+\toprule
+\textbf{Modelo} & \textbf{Supuesto} & \textbf{Verificación} & \textbf{Tratamiento} \\
+\midrule
+Regresión logística & Separabilidad lineal de las clases &
+Curvas precision-recall por clase: Bot y Web Attack quedan en AP $\approx$ 0,2, indicando que \textbf{no} son linealmente separables &
+Se conserva como referencia interpretable; se añade un modelo no lineal para las clases afectadas \\
+Regresión logística & Variables no redundantes (baja colinealidad) &
+45 pares con $|r| > 0{,}95$ sobre el conjunto de entrenamiento, agrupados en 13 bloques &
+Poda a una representante por bloque: 71 $\rightarrow$ 48 variables \\
+Regresión logística, Isolation Forest & Variables en escala comparable &
+Rangos heterogéneos (microsegundos frente a conteos) &
+\texttt{StandardScaler} ajustado \emph{dentro} del pipeline de validación \\
+HistGradient\-Boosting & Ninguno sobre escala o linealidad &
+Se verifica que el desempeño no dependa del escalado &
+No se escala; se conserva la escala original \\
+Isolation Forest & Las anomalías son pocas y estructuralmente distintas &
+Distribución de scores sobre tráfico conocido-benigno &
+Umbral fijado por cuantiles de esa distribución \\
+Todos & Ausencia de valores no finitos &
+2.867 filas (0,10\%) con Inf/NaN en dos variables de tasa (divisiones por duración cero) &
+Eliminadas (1.563 de ellas en este paso; el resto ya había salido con los duplicados), con verificación automática de que no quedan \\
+Todos & Los valores numéricos representan magnitudes &
+El valor $-1$ en \texttt{Init\_Win\_bytes} no es una magnitud sino un código de ``no aplica'' ($\approx$40\% de las filas) &
+Se convierte en indicador binario y el $-1$ pasa a 0 \\
+Todos & Independencia entre observaciones &
+330.995 filas duplicadas exactas (11,69\%) &
+Eliminadas \emph{antes} de partir en entrenamiento y prueba \\
+Todos & Variables informativas &
+8 variables constantes (varianza cero) &
+Eliminadas \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{El supuesto de linealidad, verificado con evidencia}
+
+La verificación más consecuente fue la de linealidad. La
+Figura~\ref{fig:atascadas} muestra las curvas precision-recall de las dos
+clases problemáticas bajo tres configuraciones. Con el modelo lineal, ninguna
+técnica de desbalance las rescata: el problema no era la proporción de
+clases sino que \textbf{sus fronteras de decisión no son lineales}. Al
+sustituir la familia de modelo --- sin ninguna corrección de desbalance ---
+ambas mejoran sustancialmente. Este resultado motivó el ajuste principal
+descrito en la Sección~\ref{sec:ajustes}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.86\textwidth]{figures/10_pr_clases_atascadas.png}
+\caption{Verificación del supuesto de linealidad. Las curvas se desplazan
+hacia la esquina superior derecha al cambiar de familia de modelo, no al
+cambiar la técnica de desbalance: la evidencia de que el supuesto de
+separabilidad lineal no se cumple para estas clases.}
+\label{fig:atascadas}
+\end{figure}
+
+% =====================================================================
+\section{Entrenamiento, validación, parametrización y métricas}
+% =====================================================================
+
+\subsection{Protocolo experimental}
+
+\begin{itemize}
+\item \textbf{Partición única:} 80\% entrenamiento (1.998.462 flujos) y 20\%
+prueba (499.616), estratificada por clase para preservar las proporciones
+incluso en las clases más raras. El conjunto de prueba se apartó una sola vez
+y \textbf{no se utilizó} durante todo el desarrollo.
+\item \textbf{Validación cruzada estratificada de 5 particiones} sobre el
+entrenamiento, para toda decisión: comparación de alternativas, selección de
+modelo y ajuste del punto de operación. Se reporta media $\pm$ desviación
+entre particiones.
+\item \textbf{Selección de variables:} 71 $\rightarrow$ 48, decidida
+\emph{únicamente} con el conjunto de entrenamiento (Cuadro~\ref{tab:supuestos}).
+\item \textbf{Control de fuga de información:} deduplicación previa a la
+partición; escalado y remuestreo \emph{dentro} del pipeline de validación, de
+modo que solo se ajustan con el tramo de entrenamiento de cada partición.
+\item \textbf{Reproducibilidad:} semilla fija (42) en todo el proceso y
+versiones exactas de dependencias.
+\end{itemize}
+
+\noindent\textbf{Parametrización.} El modelo de árboles usa 200 iteraciones y
+ponderación balanceada de clases. SMOTE eleva a 20.000 casos las clases con
+menos de ese umbral (igualarlas a la clase mayoritaria habría exigido
+fabricar $\approx$14 millones de filas sintéticas); el submuestreo reduce la
+clase benigna a 200.000 casos antes de aplicar SMOTE.
+
+\noindent\textbf{Calibración de hiperparámetros.} No se realizó una búsqueda
+exhaustiva de hiperparámetros, y la decisión es deliberada. Con los valores
+estándar el modelo ya superaba el requerimiento de desempeño por más de tres
+puntos de macro-F1, y la matriz de la Sección~\ref{sec:resultados} muestra
+que la variación atribuible a la familia de modelo y a la técnica de
+desbalance (de 0,543 a 0,970) domina ampliamente cualquier ganancia esperable
+de un ajuste fino de parámetros. El esfuerzo de calibración se dirigió, en
+cambio, donde el análisis mostró margen real: el \emph{punto de operación} de
+la clase Bot (Sección~\ref{sec:ajustes}, ajuste 4), fijado con datos de
+entrenamiento exclusivamente. Una búsqueda adicional habría añadido riesgo de
+sobreajustar al conjunto de validación a cambio de una ganancia marginal.
+
+\subsection{Justificación de las métricas}
+
+La elección de métricas es determinante en un problema con este desbalance:
+
+\begin{itemize}
+\item \textbf{Exactitud (accuracy): descartada.} Con 83\% de tráfico benigno,
+un clasificador que responda siempre ``normal'' alcanza 83\% de exactitud sin
+detectar un solo ataque. Se verificó empíricamente: ese clasificador trivial
+obtiene macro-F1 de 0,082 en el problema multiclase.
+\item \textbf{Macro-F1: métrica principal.} Promedia el F1 de todas las
+clases con igual peso, de modo que una clase con 1.500 casos pesa lo mismo
+que una con dos millones. Es la métrica adecuada cuando las clases raras son
+las relevantes.
+\item \textbf{Precisión y recall por clase: obligatorios.} El promedio puede
+ocultar que una clase concreta no se detecta. En el contexto del SOC tienen
+lectura directa: el recall es la fracción de ataques encontrados; la
+precisión, la fracción de alarmas que no son falsas (fatiga de alertas).
+\item \textbf{Curvas precision-recall y AP en lugar de ROC/AUC.} La tasa de
+falsos positivos que usa la curva ROC tiene por denominador la clase
+mayoritaria: con dos millones de flujos benignos, 40.000 falsas alarmas son
+apenas un 2\% y la curva luce excelente, mientras la precisión real se
+desploma. La curva PR expone ese costo. Además, el AP resultó una herramienta
+\emph{de diagnóstico}: un AP alto con recall bajo indica un problema de
+umbral, mientras que un AP bajo indica que el modelo no separa la clase.
+\item \textbf{Macro-F1 restringido a clases de ataque:} se reporta junto al
+global como cifra más exigente, al excluir del promedio la clase benigna.
+\end{itemize}
+
+\subsection{Líneas base}
+
+Antes de experimentar se fijaron dos tipos de referencia contra los cuales
+medir cualquier mejora posterior (Cuadro~\ref{tab:baseline}). La primera es el
+\textbf{clasificador trivial}: un modelo que responde siempre la clase
+mayoritaria sin mirar los datos. Marca el piso absoluto, porque cualquier
+modelo que no lo supere no está aprendiendo nada. La segunda es la
+\textbf{regresión logística sin corrección de desbalance}, que representa la
+solución más simple y transparente aplicable al problema. Ambas se calcularon
+con el mismo protocolo de validación cruzada que las alternativas posteriores,
+de modo que todas las cifras del reporte son comparables entre sí.
+
+\begin{table}[H]
+\centering
+\caption{Líneas base (validación cruzada sobre el conjunto de entrenamiento).}
+\label{tab:baseline}
+\small
+\begin{tabular}{L{7.5cm} c}
+\toprule
+\textbf{Configuración de referencia} & \textbf{macro-F1} \\
+\midrule
+Binaria --- clasificador trivial (siempre ``normal'') & 0,453 \\
+Binaria --- regresión logística & 0,921 \\
+Multiclase --- clasificador trivial (siempre ``benigno'') & 0,082 \\
+Multiclase --- regresión logística & 0,701 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =====================================================================
+\section{Análisis de resultados}
+\label{sec:resultados}
+% =====================================================================
+
+\subsection{Comparación de alternativas}
+
+El Cuadro~\ref{tab:matriz} presenta las ocho combinaciones evaluadas bajo
+condiciones idénticas, y la Figura~\ref{fig:matriz} las ordena visualmente.
+
+\begin{table}[H]
+\centering
+\caption{Matriz de alternativas: macro-F1 (media $\pm$ desviación entre las 5 particiones).}
+\label{tab:matriz}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{L{3.6cm} cccc}
+\toprule
+\textbf{Modelo} & \textbf{Sin corrección} & \textbf{Pesos de clase} & \textbf{SMOTE} & \textbf{Submues.\ + SMOTE} \\
+\midrule
+Regresión logística & 0,700 $\pm$ 0,014 & 0,543 $\pm$ 0,004 & 0,832 $\pm$ 0,005 & 0,650 $\pm$ 0,002 \\
+\textbf{Árboles (HistGB)} & 0,948 $\pm$ 0,008 & \textbf{0,970 $\pm$ 0,002} & 0,966 $\pm$ 0,003 & 0,937 $\pm$ 0,046 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.80\textwidth]{figures/07_macro_f1_experimentos.png}
+\caption{Las ocho combinaciones ordenadas por desempeño. Todas las
+configuraciones basadas en árboles superan a todas las lineales.}
+\label{fig:matriz}
+\end{figure}
+
+\noindent Tres hallazgos se desprenden de la matriz:
+
+\begin{enumerate}
+\item \textbf{La capacidad del modelo pesó más que la técnica de
+desbalance.} La peor configuración de árboles (0,937) supera a la mejor
+configuración lineal (0,832). El diagnóstico correcto no era ``falta
+corrección de desbalance'' sino ``falta capacidad de representación''.
+\item \textbf{Reponderar sin capacidad es contraproducente.} Los pesos de
+clase \emph{hunden} a la regresión logística (0,700 $\rightarrow$ 0,543):
+elevan el recall de las clases minoritarias a $\approx$0,99 pero con
+precisión de 0,02--0,03, lo que equivale a $\approx$264.000 flujos benignos
+marcados como ataque. Con un modelo capaz, la misma técnica es la mejor
+(0,948 $\rightarrow$ 0,970).
+\item \textbf{La estabilidad importa tanto como la media.} La combinación
+submuestreo + SMOTE se descartó no por su media (0,937) sino por su
+desviación (0,046): una de las particiones cayó a 0,846.
+\end{enumerate}
+
+\subsection{Modelo seleccionado para cada requerimiento}
+
+Con la evidencia anterior se fijó qué modelo responde a cada requerimiento
+aprobado del prototipo. Los códigos son los mismos del Cuadro~\ref{tab:req-modelo}
+y el enunciado de cada uno se repite aquí para que la lectura no dependa de
+volver atrás.
+
+\begin{itemize}
+\item \textbf{R1, R6 y R14} --- clasificar el tipo de ataque pese al
+desbalance, con desempeño accionable: \textbf{HistGradientBoosting con pesos
+de clase}.
+\item \textbf{R3} --- explicar en qué se basa el modelo:
+\textbf{importancia por permutación} para la lectura global y \textbf{SHAP}
+para la explicación de cada alerta individual. La regresión logística se
+conserva como lectura auxiliar del análisis, no como componente del artefacto.
+\item \textbf{R4} --- detectar comportamientos anómalos no etiquetados:
+\textbf{Isolation Forest} entrenado únicamente con tráfico benigno. El Local
+Outlier Factor se documenta como contraste y no se despliega.
+\end{itemize}
+
+% =====================================================================
+\section{Ajustes implementados a partir de los resultados}
+\label{sec:ajustes}
+% =====================================================================
+
+El análisis condujo a cinco ajustes, tres de ellos sobre la propia definición
+del problema de analítica:
+
+\paragraph{1. Ajuste al esquema de solución: de un modelo a tres.}
+Consecuencia directa del hallazgo de linealidad y de la escasez de dos
+clases. Ningún modelo único cubre el problema completo
+(Figura~\ref{fig:arquitectura}).
+
+\paragraph{2. Ajuste al problema de analítica: agrupación de clases.}
+Los tres ataques web (1.470, 652 y 21 casos) se agrupan en la familia
+``Web Attack''. La agrupación es además la natural del dominio: los tres
+atacan la aplicación web.
+
+\paragraph{3. Ajuste al problema de analítica: exclusión honesta de clases.}
+Heartbleed (11 casos) e Infiltration (36) se excluyen del problema
+multiclase: con validación cruzada de 5 particiones aportarían dos a siete
+casos por partición y cualquier métrica por clase sería ruido. Se evalúan en
+el nivel binario y con el detector de anomalías, y se reportan siempre
+acompañadas de su tamaño de muestra. Declarar la limitación es preferible a
+publicar una cifra que el dato no sostiene.
+
+\paragraph{4. Ajuste al punto de operación: umbral para la clase Bot.}
+La clase Bot alcanzaba precisión de 0,614 con recall de 0,980: cuatro de cada
+diez alarmas eran falsas. Su AP de 0,91 indicaba margen para intercambiar
+recall por precisión. Se fijó, \emph{con datos de entrenamiento
+exclusivamente}, la regla de emitir alarma de Bot solo cuando la probabilidad
+supere 0,999. Resultado sobre el conjunto de prueba: precisión 0,947 con
+recall 0,728.
+
+\paragraph{5. Verificación de validez: la prueba del puerto de destino.}
+La segunda variable más influyente resultó ser el puerto del servicio
+contactado, un \emph{identificador} y no un comportamiento: en el conjunto de
+datos cada ataque usa siempre su puerto canónico, lo que en una red real no
+está garantizado. Se reentrenó el modelo sin esa variable
+(Figura~\ref{fig:puerto}): el desempeño pasó de 0,970 a 0,950 en validación
+cruzada y de 0,967 a 0,942 en prueba. La caída es pequeña y el recall se
+mantiene en todas las clases, lo que indica que el modelo aprende
+comportamiento; el costo se concentra en la precisión de las dos clases
+difíciles. Por honestidad metodológica, ambas cifras se reportan juntas y la
+variante sin puerto se declara como la \textbf{estimación conservadora}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.86\textwidth]{figures/13_experimento_puerto.png}
+\caption{Prueba del puerto de destino. El desempeño global apenas se mueve al
+retirar el identificador; el costo se localiza en la precisión de las clases
+difíciles.}
+\label{fig:puerto}
+\end{figure}
+
+\subsection{Resultados sobre el conjunto de prueba}
+
+Fijados el modelo y su punto de operación, el conjunto de prueba se evaluó
+\textbf{una única vez} (Cuadro~\ref{tab:test}).
+
+\begin{table}[H]
+\centering
+\caption{Evaluación única sobre el conjunto de prueba (499.616 flujos).}
+\label{tab:test}
+\small
+\begin{tabular}{L{8.2cm} c c}
+\toprule
+\textbf{Configuración} & \textbf{macro-F1} & \textbf{Solo ataques} \\
+\midrule
+\textbf{Modelo final} (con puerto + umbral de Bot) & \textbf{0,975} & \textbf{0,972} \\
+Con puerto, regla estándar & 0,967 & 0,964 \\
+\textbf{Estimación conservadora} (sin el puerto) & \textbf{0,942} & \textbf{0,937} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Validez del protocolo.} Las cifras de prueba coinciden con
+las de validación cruzada (0,970 $\pm$ 0,002 frente a 0,967 con puerto;
+0,950 $\pm$ 0,004 frente a 0,942 sin él). Esa coincidencia es la evidencia de
+que no hubo sobreajuste ni fuga de información.
+
+\noindent\textbf{Cumplimiento de requerimientos.} R6 exigía macro-F1
+$\geq$ 0,94: se obtuvo 0,975 (0,942 en la estimación conservadora). R2 exigía
+falsas alarmas $\leq$ 0,2\% sobre tráfico benigno: se obtuvo 0,12\%. R5
+exigía superar sustancialmente el clasificador trivial: 0,975 frente a 0,082.
+
+\noindent\textbf{Detección no supervisada (R4).} El Isolation Forest,
+entrenado únicamente con tráfico benigno, detecta 89\% de los flujos de
+Heartbleed, 52\% de DoS slowloris y 48\% de Infiltration --- justamente las
+familias que el modelo supervisado no pudo aprender --- con un presupuesto de
+1\% de falsas alarmas. Su recall global es de 11,8\%, y se documenta
+explícitamente su punto ciego: es incapaz de detectar ataques camuflados
+(fuerza bruta, escaneo de puertos, botnet), porque en ellos cada flujo
+individual parece normal y lo anómalo reside en el agregado. R4 exigía recall
+superior a 0,4 en las familias estructuralmente raras: se cumple.
+
+\noindent\textbf{Deriva temporal (R11).} La tasa de falsas alarmas del
+detector se mantuvo en torno al 1\% previsto casi todos los días, con una
+excepción documentada: un tramo del viernes alcanzó 9,6\%. Se reporta como
+señal de que un despliegue real exigiría recalibración periódica.
+
+% =====================================================================
+\section{Estado de implementación y plan para completar el prototipo}
+\label{sec:plan}
+% =====================================================================
+
+\subsection{Componentes ya implementados}
+
+El desarrollo del prototipo se adelantó al calendario previsto. A la fecha de
+este reporte están implementados y verificados:
+
+\begin{itemize}
+\item \textbf{Modelos serializados} (1,3\,MB en total) con sus metadatos, y
+verificación de determinismo: los umbrales reproducidos coinciden decimal a
+decimal con los del análisis.
+\item \textbf{Tablero web} (Streamlit) con seis pantallas funcionales:
+resumen, clasificación, detección de anomalías, interpretabilidad, cola de
+alertas y reportes. Incluye validación de archivos de entrada, filtros,
+exportación en CSV e historial de sesión.
+\item \textbf{Archivos de demostración}: dos muestras del conjunto de prueba
+---499 flujos con 39,9\,\% de ataque y 500 flujos con 5,0\,\%, esta última en
+proporción realista--- para probar la herramienta sin datos propios.
+\item \textbf{Pruebas automatizadas} (25 casos) sobre validación de entradas,
+clasificación, umbrales y explicaciones. Los scripts se ejecutan fuera del
+repositorio; incorporarlos a él figura entre los pendientes.
+\item \textbf{Verificación de desempeño (R9):} 50.000 flujos clasificados en
+menos de un segundo (0,7--0,8\,s en mediciones repetidas) con un pico de
+memoria cercano a 390\,MB, frente a la promesa de 30 segundos y 1\,GB
+disponible.
+\item \textbf{Licencias (R25):} todas las dependencias son de código abierto
+con licencias permisivas (BSD, MIT, Apache 2.0, PSF), compatibles con uso
+académico.
+\end{itemize}
+
+\subsection{Componentes pendientes y plan}
+
+El Cuadro~\ref{tab:plan} lista los componentes que restan, con el
+requerimiento que los motiva. Todos ellos se completan como parte de la
+entrega final del proyecto, antes de la evaluación del prototipo y de la
+presentación ejecutiva.
+
+\begin{table}[H]
+\centering
+\caption{Plan para completar la implementación del prototipo.}
+\label{tab:plan}
+\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{tabular}{L{4.2cm} L{7.4cm} L{2.2cm}}
+\toprule
+\textbf{Pendiente} & \textbf{Descripción} & \textbf{Req.} \\
+\midrule
+Despliegue en URL pública & Publicar el tablero en alojamiento gratuito con la versión de Python con la que se congeló el entorno; verificar el tiempo de reanudación tras inactividad & R10, R22 \\
+Manual de usuario & Qué hace la herramienta, sus limitaciones y advertencias, requisitos previos y al menos tres casos de uso paso a paso & R24 \\
+Rúbrica de pruebas diligenciada & Tabla de requerimientos con evidencia de cumplimiento, ajustes implementados y justificación de lo no satisfecho & Entregable \\
+Tabla de falsas alarmas por día en el tablero & Los datos ya están calculados; falta exponerlos en la interfaz & R11 \\
+Prueba de usabilidad con usuario ajeno & Verificar que un usuario ajeno completa cargar $\rightarrow$ revisar $\rightarrow$ exportar sin asistencia & R20 \\
+Scripts de prueba en el repositorio & Los 25 casos automatizados se ejecutan hoy fuera del repositorio; incorporarlos los hace verificables por un tercero & Entregable \\
+Presentación ejecutiva & Siete minutos: problema, esquema de solución, demostración y propuesta de valor & Entregable \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Riesgos identificados}
+
+\begin{itemize}
+\item \textbf{Sensibilidad de versión de los artefactos.} Los modelos
+serializados dependen de la versión exacta de la librería con que se
+generaron. Mitigación: versiones congeladas, verificación al arrancar y
+mensaje de advertencia explícito.
+\item \textbf{Limitaciones del alojamiento gratuito.} No garantiza
+persistencia entre reinicios ni tiempos de reanudación acotados. Mitigación:
+el historial se declara como de sesión, no persistente.
+\item \textbf{Calidad del conjunto de datos.} La literatura documenta errores
+de etiquetado en CIC-IDS2017 (Engelen et al., 2021; Rosay et al., 2022;
+Lanvin et al., 2023). Se declara como limitación y afecta
+principalmente al detector no supervisado; se mitiga fijando el umbral por
+cuantiles, que asume explícitamente cierta contaminación.
+\end{itemize}
+
+% =====================================================================
+\section{Conclusiones}
+% =====================================================================
+
+\begin{enumerate}
+\item El tipo de ataque puede clasificarse con alta calidad pese al
+desbalance extremo: macro-F1 de 0,975 sobre el conjunto de prueba, y 0,942 en
+la estimación conservadora que no depende del puerto de destino.
+\item \textbf{El diagnóstico correcto importa más que la técnica.} Las clases
+que parecían imposibles no necesitaban más remuestreo sino un modelo capaz de
+representar fronteras no lineales. Reponderar sin capacidad multiplica las
+falsas alarmas.
+\item Los ataques se distinguen por \emph{comportamiento} --- duración,
+ritmo entre paquetes, tamaños --- y no solo por el puerto: retirar el único
+identificador cuesta entre dos y tres puntos de macro-F1.
+\item El modelo no supervisado es un complemento, no un sustituto: detecta
+sin etiquetas justamente las familias que el supervisado no puede aprender,
+pero es ciego a los ataques camuflados.
+\item El prototipo está implementado y verificado en sus componentes
+centrales; el plan de la Sección~\ref{sec:plan} cierra lo pendiente antes de la evaluación
+y la presentación ejecutiva.
+\end{enumerate}
+
+% =====================================================================
+\section*{Referencias}
+\addcontentsline{toc}{section}{Referencias}
+% =====================================================================
+
+\begin{itemize}[leftmargin=*, label={}]
+\item Sharafaldin, I., Lashkari, A. H., \& Ghorbani, A. A. (2018).
+\emph{Toward Generating a New Intrusion Detection Dataset and Intrusion
+Traffic Characterization}. 4th International Conference on Information
+Systems Security and Privacy (ICISSP), Portugal, enero de 2018.
+\item Engelen, G., Rimmer, V., \& Joosen, W. (2021). \emph{Troubleshooting an
+Intrusion Detection Dataset: the CICIDS2017 Case Study}. IEEE Security and
+Privacy Workshops.
+\item Rosay, A., et al. (2022). \emph{Network Intrusion Detection: A
+Comprehensive Analysis of CIC-IDS2017}. ICISSP.
+\item Lanvin, M., et al. (2023). \emph{Errors in the CICIDS2017 Dataset and
+the Significant Differences in Detection Performances It Makes}. CRiSIS 2022.
+\item Lundberg, S. M., \& Lee, S. I. (2017). \emph{A Unified Approach to
+Interpreting Model Predictions}. Advances in Neural Information Processing
+Systems (NeurIPS).
+\end{itemize}
+
+\end{document}

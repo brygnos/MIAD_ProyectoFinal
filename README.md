@@ -20,26 +20,56 @@ de clases e interpretabilidad**.
 ## Estructura
 
 ```
-├── data/            raw/ (CSV originales) · interim/ · processed/ (gitignored)
-├── docs/            guia_proyecto.md (material de estudio del autor; NO es
-│                    parte del informe de entrega)
+├── streamlit_app.py el TABLERO (prototipo web) — punto de entrada
+├── app/             núcleo del tablero: modelos, validación, pantallas
+├── models/          modelos serializados + metadatos (los usa el tablero)
+├── data/            raw/ · interim/ · processed/ (gitignored) · demo/ (los
+│                    dos archivos de demostración, versionados)
+├── docs/            especificacion_prototipo.md (fuente de verdad del
+│                    tablero) · notas_equipo.md · guia_proyecto.md (estudio)
 ├── notebooks/       01_eda · 02_baseline · 03_desbalance ·
 │                    04_interpretabilidad · 05_no_supervisado ·
 │                    06_evaluacion_final
-├── src/             config · carga · calidad · preparacion · limpieza ·
-│                    split · features · etiquetas · experimentos · resultados ·
-│                    interpretabilidad · no_supervisado · evaluacion_final
-└── reports/         informe.md (detallado) · informe_final.md (resumido, la
-                     entrega) · figures/ · resultados_fase3/ ·
-                     resultados_fase4/ · resultados_final/
+├── src/             pipeline del análisis (preparacion → limpieza → split →
+│                    experimentos → …) + modelo_final · preparar_demo
+└── reports/         informe.md (detallado) · informe_final.md (resumido) ·
+                     figures/ · resultados_fase3/ · _fase4/ · _final/
 ```
 
-## Setup
+## Entornos y dependencias (dos archivos, con una regla de oro)
+
+- **`requirements.txt`** — el TABLERO (liviano: streamlit, scikit-learn,
+  pandas, numpy, joblib, shap). Es lo que instala el hosting.
+- **`requirements-analisis.txt`** — el entorno completo congelado del
+  ANÁLISIS (notebooks y pipeline de `src/`).
+
+> ⚠️ **Regla no negociable:** `scikit-learn` debe ser **idéntico en ambos
+> archivos** (hoy: `1.9.0`) — de esa versión depende que los modelos de
+> `models/` carguen. Si se actualiza en uno, se actualiza en el otro y se
+> regeneran los modelos con `python -m src.modelo_final`.
+>
+> ⚠️ **Despliegue:** seleccionar **Python 3.13** en los ajustes avanzados del
+> hosting (la misma versión con la que se congeló el entorno). Desplegar en
+> otra versión de Python puede romper la carga de los modelos.
+
+### Correr el tablero localmente
+
+```bash
+python -m venv .venv-app
+# Windows: .venv-app\Scripts\Activate.ps1  |  Linux/macOS: source .venv-app/bin/activate
+pip install -r requirements.txt
+streamlit run streamlit_app.py
+```
+
+Se abre en el navegador (http://localhost:8501) con dos archivos de
+demostración listos en la barra lateral.
+
+### Reproducir el análisis
 
 ```bash
 python -m venv .venv
 # Windows: .venv\Scripts\Activate.ps1   |   Linux/macOS: source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-analisis.txt
 jupyter lab   # lanzarlo desde el venv activo: los notebooks usan su kernel por defecto
 ```
 
@@ -63,6 +93,8 @@ python -m src.resultados         # 5. condensa la Fase 3 a CSVs          (~1 min
 python -m src.interpretabilidad  # 6. pregunta 1 + experimento del puerto (~15 min*)
 python -m src.no_supervisado     # 7. pregunta 3 (Isolation Forest/LOF)  (~10 min*)
 python -m src.evaluacion_final   # 8. ÚNICA evaluación sobre el test     (~2 min*)
+python -m src.modelo_final       # 9. serializa los modelos del tablero  (~1 min)
+python -m src.preparar_demo      # 10. genera los archivos de demo       (~1 min)
 ```
 
 > El paso 8 se ejecutó **una sola vez** (regla del proyecto) y su checkpoint

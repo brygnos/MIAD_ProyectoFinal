@@ -25,6 +25,7 @@ dist/
 
 # Entornos virtuales
 .venv/
+.venv-app/
 venv/
 env/
 ENV/
@@ -47,6 +48,9 @@ reports/figures/*
 !reports/resultados_fase4/*.csv
 !reports/resultados_final/*.csv
 !reports/figures/*.png
+
+# El archivo de demostración del tablero SÍ se versiona (especificación §6)
+!data/demo/*.csv
 
 # ============================================
 # Sistema operativo / editores
