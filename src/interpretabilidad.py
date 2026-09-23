@@ -1,24 +1,26 @@
-"""Pregunta 1 (interpretabilidad) — Fase 4. Cómputo pesado checkpointeado.
+"""Pregunta 1 (interpretabilidad), Fase 4. Cómputo pesado con checkpoints.
 
-Tres piezas, todas sobre el problema BINARIO (Normal vs Ataque) salvo la
-tercera, y todas SOLO con el conjunto de entrenamiento:
+Tiene tres partes, todas solo con el conjunto de entrenamiento, y las dos
+primeras sobre el problema binario (Normal vs Ataque):
 
-1. Historia legible: coeficientes de la regresión logística estandarizada,
-   ajustada en cada una de las 5 particiones (media ± desviación para ver
-   estabilidad). Sobre features estandarizadas, la magnitud del coeficiente
-   es comparable entre features y el signo dice hacia dónde empuja.
-2. El modelo real: importancia por permutación del HistGB con pesos de clase
-   (el campeón de la Fase 3), medida sobre una porción de validación que el
-   modelo no vio (si al barajar una feature el desempeño cae mucho, el modelo
-   dependía de ella).
-3. Verificación de validez con el puerto de destino: 'Destination Port' es un
-   identificador, no un comportamiento (el ataque web vive en el puerto 80 de
-   este dataset, pero nada impide otro puerto en el mundo real). Se reentrena
-   el campeón multiclase SIN esa feature y se compara contra el resultado de
-   la Fase 3 (que la incluía). Si el desempeño se mantiene, el modelo aprende
-   comportamiento; si se derrumba, se apoyaba en un artefacto del dataset.
+1. Lectura sencilla: los coeficientes de la regresión logística estandarizada,
+   ajustada en cada una de las 5 particiones (media ± desviación para ver qué
+   tan estables son). Como las features están estandarizadas, la magnitud del
+   coeficiente se puede comparar entre features y el signo dice hacia dónde
+   empuja.
+2. El modelo real: la importancia por permutación del HistGB con pesos de
+   clase (el mejor modelo de la Fase 3), medida sobre una porción de
+   validación que el modelo no vio. Si al barajar una feature el desempeño cae
+   mucho, quiere decir que el modelo dependía de ella.
+3. Verificación de validez con el puerto de destino: 'Destination Port'
+   identifica el servicio y no describe el comportamiento del tráfico (en este
+   dataset el ataque web siempre usa el puerto 80, pero en el mundo real puede
+   usar cualquier otro). Se reentrena el mejor modelo multiclase sin esa
+   feature y se compara con el resultado de la Fase 3 (que sí la incluía). Si
+   el desempeño se mantiene, el modelo aprende comportamiento; si cae mucho,
+   se estaba apoyando en un artefacto del dataset.
 
-Resultados: checkpoints joblib en data/interim/fase4/ y CSVs compactos en
+Resultados: checkpoints joblib en data/interim/fase4/ y CSVs resumidos en
 reports/resultados_fase4/ (los notebooks solo leen los CSVs).
 
 Ejecutar desde la raíz del proyecto:
@@ -50,7 +52,7 @@ from src.features import features_finales
 RUTA_CHECKPOINTS = RUTA_INTERIM / "fase4"
 RUTA_EXPORT = RUTA_REPORTES / "resultados_fase4"
 
-# Features que identifican en vez de describir comportamiento (verificación 4-5)
+# Features que identifican el servicio en lugar de describir el comportamiento (verificación 4-5)
 FEATURES_IDENTIFICADORAS = ["Destination Port"]
 
 # Tamaño de la muestra de validación para la importancia por permutación
@@ -113,10 +115,10 @@ def importancia_permutacion(X, y_bin, features) -> pd.DataFrame:
 
 
 def experimento_puerto(train, features) -> dict:
-    """Reentrena el campeón multiclase (árboles + pesos) SIN el puerto.
+    """Reentrena el mejor modelo multiclase (árboles + pesos) sin el puerto.
 
-    La variante CON puerto no se recalcula: es exactamente el resultado
-    guardado de la Fase 3 (mismas particiones, misma semilla).
+    La variante con puerto no se recalcula, porque es exactamente el
+    resultado guardado de la Fase 3 (mismas particiones, misma semilla).
     """
     mascara = mascara_multiclase(train[COLUMNA_ETIQUETA]).values
     y_multi = etiqueta_multiclase(train.loc[mascara, COLUMNA_ETIQUETA]).astype(str).values

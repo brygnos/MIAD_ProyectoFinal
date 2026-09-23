@@ -812,3 +812,72 @@ reservado para la reescritura de comentarios; puede moverse después. Se añadi�
   para que refleje el estado real. Con ella habrá que actualizar el punto (vi)
   del resumen y la conclusión 5, que remiten al plan.
 - Decidir si el `\date` se fija a la fecha de entrega.
+
+
+---
+
+## Fase E — Revisión de estilo y auditoría general antes del repositorio limpio (22 de septiembre de 2026)
+
+### Textos en el estilo del equipo
+
+Bryan reescribió los textos de tres pantallas del tablero y, siguiendo ese
+estilo (sin rayas, sin la estructura "no es X, es Y", sin mayúsculas para
+enfatizar), se reescribieron las otras tres pantallas, el markdown y los
+comentarios de los seis notebooks, y los comentarios y docstrings de `src/` y
+`tests/`. En los notebooks solo cambió texto: las salidas, el código y los
+números de ejecución quedaron idénticos (verificado contra el commit). La
+prueba de R21 dejó de exigir la frase literal "Qué muestra" y ahora revisa la
+estructura (título + descripción, guía "Cómo leer", explicación de cada término
+técnico en la misma pantalla donde se usa); se comprobó que detecta cinco
+defectos introducidos a propósito.
+
+### Auditoría general
+
+Se verificó todo pensando en que el proyecto se copie a una carpeta nueva:
+
+- **Cifras.** Las 17 cifras oficiales de la especificación se recalcularon desde
+  los CSV versionados y coinciden. Las cifras secundarias de notebooks, informe
+  final y reporte técnico también se cruzaron contra los datos.
+- **Requirements.** Coinciden exactamente con los entornos instalados, cubren
+  todos los imports y scikit-learn es el mismo en ambos (1.9.0). Se resolvieron
+  para Windows, Linux y Mac con Python 3.13.
+- **Carpeta nueva.** Se copiaron solo los archivos del repositorio, se creó el
+  entorno desde cero con `requirements.txt` y se siguieron las instrucciones del
+  README: 17 pruebas pasan y 8 se omiten (las 6 manuales y las 2 que necesitan
+  los datos), el tablero corre sin errores en sus seis pantallas, y los
+  notebooks 03 a 06 regeneran sus 11 figuras idénticas píxel a píxel y los
+  mismos 1.908 números.
+
+Errores encontrados y corregidos:
+
+1. `requirements-analisis.txt` no se podía instalar en Mac ni Linux porque
+   fijaba `pywinpty`, que solo existe en Windows; ahora lleva un marcador de
+   plataforma.
+2. El README tenía rutas absolutas del equipo de desarrollo y solo explicaba
+   Windows; ahora es genérico, cubre Mac y Linux, y agrega dos casos nuevos:
+   el Mac con procesador Intel (no puede instalar el entorno del tablero porque
+   `numba`, dependencia de SHAP, ya no publica versiones para esa plataforma) y
+   el error de rutas de más de 260 caracteres en Windows (encontrado en la
+   simulación). También decía "17 figuras" (son 18) y mandaba al reporte del
+   Módulo 2 como anexo técnico.
+3. Cifras mal escritas: "26 falsas alarmas por cada 100" (son ~16, notebook 03);
+   "~9.400 alarmas falsas" el viernes (son ~7.300, notebook 05); "~1,4M de
+   negativos" (son ~2,4M, notebook 01); "~40 % de las filas con −1" (es el
+   51 %, informe final y reporte técnico); "51 pares con |r| > 0,95" en la
+   tabla de limpieza (la decisión se tomó con 45 pares en el entrenamiento);
+   "AP ≈ 0,2" para Bot y Web Attack (son 0,22 y 0,30).
+4. Afirmaciones inexactas: que slowloris estaba entre las clases que el
+   supervisado no pudo aprender (solo Heartbleed e Infiltration); que la
+   validación cruzada se usó "para toda decisión" (la importancia por
+   permutación usó una partición); que `evaluacion_final.py` era el único
+   lector del test (también lo lee `preparar_demo.py`, sin calcular métricas).
+5. Referencias a documentos que no viajan en la entrega (la bitácora) desde el
+   informe final, los notebooks y `src/`; ahora apuntan a
+   `reports/informe_final.md` o al reporte técnico.
+6. La especificación todavía listaba R23 a R26; ahora son "aspectos añadidos"
+   sin código, porque la tabla de requerimientos va de R1 a R22.
+7. Código muerto e imports sin usar en el generador de apéndices y en las
+   pruebas (pyflakes queda sin avisos).
+
+El reporte del Módulo 2 sigue congelado y conserva sus erratas (el "AP ≈ 0,2",
+el "≈40 %" y la frase de slowloris) como registro de lo calificado.

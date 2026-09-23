@@ -21,11 +21,11 @@ def listar_archivos_crudos() -> list[Path]:
 
 
 def leer_csv_crudo(ruta: Path, nrows: int | None = None) -> pd.DataFrame:
-    """Lee un CSV crudo SIN modificar nombres de columna ni valores.
+    """Lee un CSV crudo sin modificar los nombres de columna ni los valores.
 
     Intenta UTF-8 y, si el archivo trae caracteres de Windows (pasa en el
-    archivo de ataques web, cuyas etiquetas usan un guion cp1252), reintenta
-    con cp1252. `nrows` permite leer solo una muestra.
+    archivo de ataques web, cuyas etiquetas usan un guion cp1252), vuelve a
+    intentar con cp1252. `nrows` permite leer solo una muestra.
     """
     try:
         return pd.read_csv(ruta, nrows=nrows, low_memory=False)
@@ -34,9 +34,9 @@ def leer_csv_crudo(ruta: Path, nrows: int | None = None) -> pd.DataFrame:
 
 
 def normalizar_nombres_columnas(df: pd.DataFrame) -> pd.DataFrame:
-    """Quita espacios al inicio/fin de los nombres y colapsa espacios internos.
+    """Quita los espacios al inicio y al final de los nombres y colapsa los internos.
 
-    Ejemplo: ' Flow Duration' -> 'Flow Duration'.
+    Por ejemplo, ' Flow Duration' queda como 'Flow Duration'.
     """
     df = df.copy()
     df.columns = [" ".join(str(c).split()) for c in df.columns]

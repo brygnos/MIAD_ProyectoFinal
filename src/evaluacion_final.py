@@ -1,21 +1,25 @@
-"""Evaluación FINAL sobre el conjunto de prueba — fase final. UNA sola pasada.
+"""Evaluación final sobre el conjunto de prueba (fase final). Se ejecuta una sola vez.
 
-Este es el ÚNICO módulo del proyecto autorizado a leer test.parquet. Reglas:
+Este es el único módulo del proyecto que calcula métricas con test.parquet
+(src/preparar_demo.py también lo lee, pero solo para sacar las muestras de la
+demostración del tablero). Reglas:
 
-- El umbral de Bot (UMBRAL_BOT) se fijó ANTES, solo con las probabilidades
-  out-of-fold del entrenamiento (ver informe, Paso 1 de la fase final):
-  la alarma de Bot solo se emite si P(Bot) >= 0,999; si no, el flujo se
-  reasigna a la segunda clase más probable. Con OOF de train ese punto da
-  precisión 0,93 / recall 0,68 (con puerto) y 0,87 / 0,61 (sin puerto),
-  frente a 0,61 / 0,98 y 0,46 / 0,61 del argmax.
-- Se evalúan DOS variantes del campeón (árboles + pesos de clase, reentrenado
-  con TODO el train): con puerto y sin identificadores ('Destination Port' es
-  el único identificador presente entre las 48 features, verificado).
-- Además: detector binario (para las clases ultra-raras del test, con n
-  mínima: cifras ilustrativas) e Isolation Forest del lunes sobre el test.
-- Una vez calculado, NO se reajusta nada con base en estos resultados.
+- El umbral de Bot (UMBRAL_BOT) se fijó antes, solo con las probabilidades
+  out-of-fold del entrenamiento (ver la sección 4.4 de reports/informe_final.md).
+  La alarma de Bot solo se emite si P(Bot) >= 0,999, y si no, el flujo se
+  reasigna a la segunda clase más probable. Con las probabilidades out-of-fold
+  del train ese punto da precisión 0,93 / recall 0,68 (con puerto) y
+  0,87 / 0,61 (sin puerto), frente a 0,61 / 0,98 y 0,46 / 0,61 del argmax.
+- Se evalúan dos variantes del mejor modelo (árboles + pesos de clase,
+  reentrenado con todo el train): con puerto y sin identificadores
+  ('Destination Port' es el único identificador entre las 48 features, ya
+  verificado).
+- También se evalúan el detector binario (para las clases extremadamente raras
+  del test, con n mínima, así que sus cifras son ilustrativas) y el Isolation
+  Forest del lunes sobre el test.
+- Una vez calculado, no se reajusta nada con base en estos resultados.
 
-Checkpoint en data/interim/fase5/ y CSVs compactos en
+El checkpoint queda en data/interim/fase5/ y los CSVs resumidos en
 reports/resultados_final/.
 
 Ejecutar desde la raíz del proyecto:
@@ -58,7 +62,7 @@ from src.interpretabilidad import FEATURES_IDENTIFICADORAS
 RUTA_CHECKPOINT = RUTA_INTERIM / "fase5" / "evaluacion_test.joblib"
 RUTA_EXPORT = RUTA_REPORTES / "resultados_final"
 
-# Fijado con OOF del TRAIN (Paso 1); nunca se miró el test para elegirlo.
+# Se fijó con las probabilidades out-of-fold del train; el test nunca se usó para elegirlo.
 UMBRAL_BOT = 0.999
 
 CUANTILES_UMBRAL_IF = [0.005, 0.01, 0.02]
@@ -107,7 +111,7 @@ def calcular() -> dict:
 
     resultados = {"umbral_bot": UMBRAL_BOT}
 
-    # ---------- Multiclase: campeón con TODO el train, dos variantes ----------
+    # ---------- Multiclase: el mejor modelo con todo el train, en dos variantes ----------
     m_tr = mascara_multiclase(train[COLUMNA_ETIQUETA]).values
     m_te = mascara_multiclase(test[COLUMNA_ETIQUETA]).values
     y_tr = etiqueta_multiclase(train.loc[m_tr, COLUMNA_ETIQUETA]).astype(str).values
@@ -135,7 +139,7 @@ def calcular() -> dict:
         print(f"[multiclase {nombre}] listo en {time.time() - t0:.0f}s "
               f"(macro-F1 argmax = {resultados[nombre]['argmax']['macro_f1']:.3f})", flush=True)
 
-    # ---------- Binario: para las clases ultra-raras (n mínima) ----------
+    # ---------- Binario: para las clases extremadamente raras (n mínima) ----------
     t0 = time.time()
     y_bin_tr = etiqueta_binaria(train[COLUMNA_ETIQUETA]).values
     y_bin_te = etiqueta_binaria(test[COLUMNA_ETIQUETA]).values

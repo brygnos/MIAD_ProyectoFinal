@@ -1,13 +1,13 @@
 # Detección de tráfico de red malicioso con aprendizaje de máquina
 ## Clasificación con desbalance de clases e interpretabilidad sobre CIC-IDS2017
 
-> **Este es el informe RESUMIDO** — la versión de entrega, para lectura
-> rápida. Cuenta todo lo que se hizo; el desarrollo completo de cada fase,
-> decisión y justificación está en el **informe detallado**
-> ([bitacora_proyecto.md](bitacora_proyecto.md)): ambos documentos son la misma historia a
-> distinta profundidad. Los notebooks 01-06 contienen todas las tablas y
-> figuras ya ejecutadas, y los resultados numéricos completos viven en CSVs
-> versionados (`reports/resultados_*/`).
+> **Este es el informe resumido**, la versión de entrega para lectura rápida.
+> Cuenta todo lo que se hizo; el detalle técnico de los experimentos (supuestos
+> de cada modelo, protocolo, configuración de parámetros y evidencia de
+> colinealidad) está en el **reporte técnico**
+> ([reporte_tecnico_final.pdf](reporte_tecnico_final.pdf)). Los notebooks 01-06
+> contienen todas las tablas y figuras ya ejecutadas, y los resultados
+> numéricos completos están en CSVs versionados (`reports/resultados_*/`).
 
 ---
 
@@ -61,8 +61,8 @@ dataset, y cada decisión de limpieza respondió a un diagnóstico:
 | Filas duplicadas exactas | 330.995 (11,7%) | Eliminadas: una fila repetida en entrenamiento y prueba se "acierta" de memoria (fuga de información) |
 | Valores infinitos/faltantes en 2 features de tasa | 0,10% de las filas | Eliminadas (divisiones entre duración 0) |
 | Duraciones negativas | 115 filas en el dataset crudo | Eliminadas (error de captura; 107 tras deduplicar — el resto cayó junto con los duplicados) |
-| El valor −1 en `Init_Win_bytes_*` | ~40% de las filas | No es un error: es un código de "no aplica"; se convirtió en un indicador binario |
-| 8 features constantes y 51 pares con correlación > 0,95 | — | Eliminadas/podadas: dos columnas idénticas se reparten la importancia y dañan la interpretación |
+| El valor −1 en `Init_Win_bytes_*` | 51% de las filas en `Init_Win_bytes_backward` (1.441.552) y 35% en `Init_Win_bytes_forward` (1.001.189) | No es un error: es un código de "no aplica"; se convirtió en un indicador binario |
+| 8 features constantes y 45 pares con correlación > 0,95 en el entrenamiento (13 bloques) | — | Eliminadas/podadas: dos columnas idénticas se reparten la importancia y dañan la interpretación |
 
 Resultado de la limpieza: **2.498.078 flujos y 71 features**. La poda por
 correlación (71 → **48 features** descriptivas de comportamiento) se decidió
@@ -89,8 +89,9 @@ de anomalías.
   clase, semilla 42. **El conjunto de prueba no se tocó durante todo el
   desarrollo**; se usó una única vez, al final (sección 4.4).
 - **Validación cruzada estratificada de 5 particiones** sobre el entrenamiento
-  para toda decisión: comparación de técnicas, selección del modelo, ajuste del
-  punto de operación.
+  para comparar técnicas, seleccionar el modelo y ajustar el punto de
+  operación. La importancia por permutación, por su costo computacional, se
+  midió con una sola partición.
 - **Sin fuga de información:** el escalado se ajusta dentro del pipeline (solo
   con el tramo de entrenamiento de cada partición) y todo remuestreo — SMOTE
   (una técnica que crea ejemplos sintéticos de las clases raras interpolando
@@ -134,7 +135,7 @@ Tres hallazgos:
 
 1. **La capacidad del modelo pesó más que la técnica de desbalance.** El peor
    de los árboles supera a la mejor logística. Las clases "atascadas" (Bot y
-   Web Attack, con AP ≈ 0,2 en la línea base lineal) no estaban
+   Web Attack, con AP de 0,22 y 0,30 en la línea base lineal) no estaban
    atascadas por el desbalance sino porque sus fronteras no son lineales: los
    árboles las recuperaron incluso sin corrección alguna (AP 0,54 y 0,85), y
    con pesos de clase quedaron en AP 0,91 y 0,99.
@@ -191,9 +192,10 @@ semana, el detector parte los ataques en dos mundos:
 - **Los que ve — flujos estructuralmente raros:** Heartbleed (0,89),
   DoS slowloris (0,52), Infiltration (0,48). No es casualidad: son ataques cuyo
   flujo individual ya es anómalo (una extracción gigante de memoria, conexiones
-  eternas). Y son **exactamente las clases que el clasificador supervisado tuvo
-  que excluir por falta de datos**: el detector no supervisado complementa al
-  supervisado justo donde este no llega, sin usar una sola etiqueta.
+  eternas). Y dos de ellas, **Heartbleed e Infiltration, son justo las clases
+  que el clasificador supervisado tuvo que excluir por falta de datos**: el
+  detector no supervisado complementa al supervisado donde este no llega, sin
+  usar una sola etiqueta.
 - **Los que no ve — el punto ciego del enfoque:** la fuerza bruta de
   contraseñas contra los servicios de archivos (FTP) y de acceso remoto (SSH),
   el escaneo de puertos y los ataques web y de botnet tienen recall ≈ 0. **Cada flujo individual de

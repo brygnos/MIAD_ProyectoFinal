@@ -1,24 +1,24 @@
-"""Archivos de demostración del tablero — prototipo (§6 de la especificación).
+"""Archivos de demostración del tablero (prototipo, §6 de la especificación).
 
-Produce data/demo/ con DOS demostraciones, cada una con sus etiquetas aparte:
+Produce en data/demo/ dos demostraciones, cada una con sus etiquetas aparte:
 
-- flujos_demo.csv : ~500 flujos ricos en tipos de ataque (40% de ataque, los
-  14 tipos presentes) — la demo de "mira todo lo que detecta".
-- flujos_demo_realista.csv : ~500 flujos con ~5% de ataque, la proporción
-  realista de un lote típico — la demo de "mira cuánto trabajo te ahorra"
-  (así la reducción de carga de revisión de R5 no queda subestimada).
+- flujos_demo.csv: ~500 flujos con muchos tipos de ataque (40% de ataque y los
+  14 tipos presentes), para mostrar todo lo que la herramienta detecta.
+- flujos_demo_realista.csv: ~500 flujos con ~5% de ataque, que es la
+  proporción realista de un lote típico, para mostrar cuánto trabajo ahorra
+  (así la reducción de la carga de revisión de R5 no queda subestimada).
 
-Ambos salen del CONJUNTO DE PRUEBA (el modelo nunca los vio: la demostración
-es honesta) y van re-expresados en el ESQUEMA CRUDO COMPLETO de CICFlowMeter
-— los nombres originales con sus espacios, la columna 'Fwd Header Length'
-repetida, las 8 columnas constantes y el código -1 de Init_Win_bytes
-restaurado — y SIN la columna de etiqueta. Las etiquetas verdaderas quedan en
-etiquetas_demo*.csv, archivos que el tablero NUNCA lee; sirven solo para
-verificar y narrar la demostración.
+Las dos salen del conjunto de prueba (el modelo nunca vio esos flujos, así que
+la demostración es honesta) y se guardan en el esquema crudo completo de
+CICFlowMeter: los nombres originales con sus espacios, la columna
+'Fwd Header Length' repetida, las 8 columnas constantes y el código -1 de
+Init_Win_bytes restaurado, y sin la columna de etiqueta. Las etiquetas
+verdaderas quedan en etiquetas_demo*.csv, archivos que el tablero nunca lee y
+que sirven solo para verificar y narrar la demostración.
 
-Es material de demostración, no de evaluación: aquí no se calcula ninguna
-métrica ni se ajusta nada. Requiere data/raw/ presente (lee el encabezado y
-los dtypes reales de un CSV crudo para reconstruir el esquema).
+Es material de demostración: aquí no se calcula ninguna métrica ni se ajusta
+nada. Requiere data/raw/ (lee el encabezado y los dtypes reales de un CSV
+crudo para reconstruir el esquema).
 
 Ejecutar desde la raíz del proyecto:
     python -m src.preparar_demo

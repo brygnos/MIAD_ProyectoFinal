@@ -94,18 +94,19 @@ trabajo de esta fase.
 | **R21** | Resultados comprensibles en lenguaje llano | Cada pantalla indica qué muestra y cómo leerlo; ningún término técnico sin explicación | **Construir** |
 | **R22** | Compatibilidad de acceso | Funciona en navegadores de escritorio modernos; solo se necesita la URL. No optimizado para móvil | **Construir y verificar** |
 
-### Requerimientos añadidos en respuesta a la retroalimentación
+### Aspectos añadidos en respuesta a la retroalimentación
 
 La evaluación de usabilidad pidió explicitar *"UI/UX, capacitación, recursos/licencias y
-ambiente tecnológico"*. Estos cuatro se incorporan y se reportarán como ajustes
-implementados.
+ambiente tecnológico"*. Estos cuatro aspectos se incorporan como ajustes implementados.
+No son requerimientos numerados: la tabla de requerimientos va de R1 a R22, y el manual
+de usuario lo exige la Rúbrica 3 del Módulo 3.
 
-| ID | Requerimiento | Criterio de aceptación |
-|---|---|---|
-| **R23** | Consistencia de interfaz (UI/UX) | Navegación uniforme entre pantallas; estados visibles de carga, vacío y error; ninguna acción deja al usuario sin señal de lo que ocurrió |
-| **R24** | Capacitación del usuario | Manual de usuario con qué hace la herramienta, sus limitaciones y advertencias, requisitos previos, y al menos tres casos de uso paso a paso |
-| **R25** | Recursos y licencias | Todas las dependencias son de código abierto con licencia compatible con uso académico; el dataset se cita según los términos de su proveedor |
-| **R26** | Ambiente tecnológico | Documentado el entorno mínimo: para el usuario final, navegador de escritorio sin instalación; para reproducir el análisis, versión de Python, dependencias con versiones fijas y memoria requerida |
+| Aspecto | Criterio de aceptación |
+|---|---|
+| Consistencia de interfaz (UI/UX) | Navegación uniforme entre pantallas; estados visibles de carga, vacío y error; ninguna acción deja al usuario sin señal de lo que ocurrió |
+| Capacitación del usuario | Manual de usuario con qué hace la herramienta, sus limitaciones y advertencias, requisitos previos, y al menos tres casos de uso paso a paso |
+| Recursos y licencias | Todas las dependencias son de código abierto con licencia compatible con uso académico; el dataset se cita según los términos de su proveedor |
+| Ambiente tecnológico | Documentado el entorno mínimo: para el usuario final, navegador de escritorio sin instalación; para reproducir el análisis, versión de Python, dependencias con versiones fijas y memoria requerida |
 
 ---
 

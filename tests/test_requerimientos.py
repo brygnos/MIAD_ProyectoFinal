@@ -1,11 +1,11 @@
-"""Pruebas de los 22 requerimientos, una a una contra la columna «Prueba
+"""Pruebas de los 22 requerimientos, una por una contra la columna «Prueba
 prevista» de la tabla de requerimientos entregada.
 
-Convención: cada función se llama `test_Rnn_...` y su docstring cita la
-prueba prevista y el criterio. Las que no se pueden automatizar (dependen
-del tablero desplegado o de una persona ajena) están marcadas `manual` y se
-OMITEN con la razón visible en el reporte, para que el mismo comando deje
-constancia de qué se verificó por código y qué requiere verificación humana.
+Convención: cada función se llama `test_Rnn_...` y su docstring cita la prueba
+prevista y el criterio. Las que no se pueden automatizar (dependen del tablero
+desplegado o de una persona ajena al proyecto) están marcadas como `manual` y
+se omiten mostrando la razón en el reporte. Así el mismo comando deja
+constancia de qué se verificó con código y qué requiere verificación humana.
 
 Ejecutar desde la raíz del proyecto, con el entorno de la app:
     python -m pytest -v
@@ -13,7 +13,6 @@ Ejecutar desde la raíz del proyecto, con el entorno de la app:
 
 import ast
 import time
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -32,8 +31,8 @@ from tests.conftest import (
 
 SRC = RAIZ / "src"
 
-# Familias que el detector de anomalías SÍ ve (estructuralmente raras) y las
-# que NO ve (camufladas: cada flujo parece normal). Ambas cosas se verifican.
+# Familias que el detector de anomalías sí ve (estructuralmente raras) y las
+# que no ve (camufladas, porque cada flujo parece normal). Se verifican las dos.
 FAMILIAS_RARAS = ["Heartbleed", "DoS slowloris", "Infiltration"]
 FAMILIAS_CAMUFLADAS = ["FTP-Patator", "SSH-Patator", "PortScan", "Bot"]
 
@@ -49,7 +48,7 @@ def _macro(metricas, variante, regla):
 # ======================================================================
 
 def test_R01_clasifica_10_ataques_mas_benigno_una_clase_por_flujo(por_clase_test, demo_rica):
-    """R1 — Prueba prevista: evaluación única sobre el conjunto de prueba
+    """R1. Prueba prevista: evaluación única sobre el conjunto de prueba
     apartado (20 %, 499.616 flujos nunca vistos).
     Criterio: distingue benigno de 10 clases de ataque (los 3 web agrupados
     en «Web Attack») y entrega una clase por flujo; Heartbleed e Infiltration
@@ -74,7 +73,7 @@ def test_R01_clasifica_10_ataques_mas_benigno_una_clase_por_flujo(por_clase_test
 
 
 def test_R02_falsas_alarmas_benigno_menor_o_igual_0_2_pct(confusion_final):
-    """R2 — Prueba prevista: conteo de falsos positivos sobre el tráfico
+    """R2. Prueba prevista: conteo de falsos positivos sobre el tráfico
     benigno del conjunto de prueba. Criterio: tasa ≤ 0,2 %."""
     fila = confusion_final.loc["BENIGN"]
     total = int(fila.sum())
@@ -85,7 +84,7 @@ def test_R02_falsas_alarmas_benigno_menor_o_igual_0_2_pct(confusion_final):
 
 
 def test_R03_diez_alertas_muestran_caracteristicas_determinantes(recursos, demo_rica, caracteristicas):
-    """R3 — Prueba prevista: inspección de 10 alertas del archivo de
+    """R3. Prueba prevista: inspección de 10 alertas del archivo de
     demostración, verificando que cada una muestra sus características
     determinantes. Criterio: (a) características más influyentes en general
     y (b) las que más pesaron en cada alerta individual."""
@@ -116,10 +115,10 @@ def test_R03_diez_alertas_muestran_caracteristicas_determinantes(recursos, demo_
 
 
 def test_R04_detector_ve_familias_raras_y_declara_las_camufladas():
-    """R4 — Prueba prevista: detector no supervisado entrenado únicamente
+    """R4. Prueba prevista: detector no supervisado entrenado únicamente
     con el tráfico benigno del lunes, evaluado sobre el resto de la semana
     y sobre el conjunto de prueba. Criterio: recall > 0,4 en las familias
-    estructuralmente raras al 1 % de falsas alarmas; se documenta que NO
+    estructuralmente raras al 1 % de falsas alarmas; se documenta que no
     detecta las camufladas."""
     semana = pd.read_csv(RUTA_FASE4 / "q3_recall_por_ataque.csv")
     semana = semana[(semana.modelo == "iforest") & (semana.umbral_pct == 1.0)].set_index("clase")
@@ -138,7 +137,7 @@ def test_R04_detector_ve_familias_raras_y_declara_las_camufladas():
 
 
 def test_R05_supera_linea_base_trivial_y_reduce_carga_de_revision(metricas_test, demo_rica, demo_realista):
-    """R5 — Prueba prevista: comparación contra la línea base trivial (marcar
+    """R5. Prueba prevista: comparación contra la línea base trivial (marcar
     todo como benigno) y estimación del esfuerzo de revisión manual para el
     mismo volumen. Criterio: supera sustancialmente la referencia 0,082 y
     reduce a segundos la priorización."""
@@ -158,7 +157,7 @@ def test_R05_supera_linea_base_trivial_y_reduce_carga_de_revision(metricas_test,
 # ======================================================================
 
 def test_R06_macro_f1_en_prueba_mayor_o_igual_0_94(metricas_test):
-    """R6 — Prueba prevista: validación cruzada estratificada de 5
+    """R6. Prueba prevista: validación cruzada estratificada de 5
     particiones sobre entrenamiento y evaluación única sobre prueba.
     Criterio: macro-F1 ≥ 0,94 en el conjunto de prueba (también en la
     estimación conservadora sin el puerto)."""
@@ -167,7 +166,7 @@ def test_R06_macro_f1_en_prueba_mayor_o_igual_0_94(metricas_test):
 
 
 def test_R07_semilla_fija_y_clasificacion_determinista(recursos, demo_rica, caracteristicas):
-    """R7 — Prueba prevista: re-ejecución con semilla fija (42) y comparación
+    """R7. Prueba prevista: re-ejecución con semilla fija (42) y comparación
     de cifras entre ejecuciones. Aquí: la semilla está declarada y dos
     clasificaciones del mismo archivo son idénticas bit a bit."""
     from src import config
@@ -183,10 +182,10 @@ def test_R07_semilla_fija_y_clasificacion_determinista(recursos, demo_rica, cara
 @pytest.mark.datos_locales
 @pytest.mark.skipif(not RUTA_TRAIN.exists(), reason="requiere data/processed/train.parquet (no viaja con el repo)")
 def test_R07_reentrenar_detector_reproduce_umbrales_exactos(recursos, caracteristicas):
-    """R7 (parte pesada) — re-ejecución real de una etapa del pipeline: el
-    detector de anomalías se vuelve a entrenar con el lunes benigno y semilla
-    42, y sus umbrales por cuantiles deben coincidir decimal a decimal con
-    los guardados en models/."""
+    """R7 (parte pesada): re-ejecución real de una etapa del pipeline. El
+    detector de anomalías se vuelve a entrenar con el lunes benigno y la
+    semilla 42, y sus umbrales por cuantiles deben coincidir decimal a
+    decimal con los guardados en models/."""
     from sklearn.ensemble import IsolationForest
     from sklearn.preprocessing import StandardScaler
     from src.config import COLUMNA_ETIQUETA, ETIQUETA_BENIGNA, RANDOM_STATE
@@ -205,13 +204,14 @@ def test_R07_reentrenar_detector_reproduce_umbrales_exactos(recursos, caracteris
 
 
 def test_R08_anti_fuga_un_solo_lector_del_test_y_cv_coincide_con_prueba(metricas_test):
-    """R8 — Prueba prevista: auditoría del código (escalado y remuestreo
+    """R8. Prueba prevista: auditoría del código (escalado y remuestreo
     dentro del pipeline de validación cruzada; un único módulo autorizado a
-    leer el conjunto de prueba) y comparación validación cruzada ↔ prueba."""
+    leer el conjunto de prueba) y comparación entre la validación cruzada y
+    la prueba."""
     # (1) quién lee el test: solo evaluacion_final.py (la evaluación única) y
-    #     preparar_demo.py, que la especificación autoriza a MUESTREAR flujos del
-    #     test para la demostración. Ninguno más; y preparar_demo no calcula
-    #     ninguna métrica con ellos.
+    #     preparar_demo.py, al que la especificación le permite tomar muestras
+    #     del test para la demostración. Ningún otro módulo lo lee, y
+    #     preparar_demo no calcula ninguna métrica con esos flujos.
     lectores = {}
     for f in sorted(SRC.glob("*.py")):
         cod = f.read_text(encoding="utf-8")
@@ -221,7 +221,7 @@ def test_R08_anti_fuga_un_solo_lector_del_test_y_cv_coincide_con_prueba(metricas
     demo = lectores["preparar_demo.py"]
     assert "sklearn.metrics" not in demo and "_score(" not in demo and "predict" not in demo,         "preparar_demo.py no debe evaluar nada sobre el test"
 
-    # (2) escalado y remuestreo viven DENTRO del pipeline de CV
+    # (2) el escalado y el remuestreo están dentro del pipeline de validación cruzada
     exp = (SRC / "experimentos.py").read_text(encoding="utf-8")
     assert "from imblearn.pipeline import Pipeline" in exp
     assert '("escalado", StandardScaler())' in exp
@@ -236,9 +236,9 @@ def test_R08_anti_fuga_un_solo_lector_del_test_y_cv_coincide_con_prueba(metricas
 
 
 def test_R09_local_50000_flujos_en_menos_de_30_segundos(recursos, demo_crudo, caracteristicas):
-    """R9 — Prueba prevista: medición del tiempo de clasificación con archivos
-    de tamaño creciente EN EL TABLERO DESPLEGADO. Esta es la medición local
-    (evidencia parcial); la definitiva se repite tras el despliegue.
+    """R9. Prueba prevista: medición del tiempo de clasificación con archivos
+    de tamaño creciente en el tablero desplegado. Esta es la medición local
+    (evidencia parcial); la definitiva se repite después del despliegue.
     Criterio: hasta 50.000 flujos en menos de 30 segundos."""
     rng = np.random.default_rng(42)
     lote = demo_crudo.iloc[rng.integers(0, len(demo_crudo), 50_000)]
@@ -254,12 +254,12 @@ def test_R09_local_50000_flujos_en_menos_de_30_segundos(recursos, demo_crudo, ca
 @pytest.mark.manual
 @pytest.mark.skip(reason="R10 — manual: abrir la URL pública desde un equipo distinto al de desarrollo y medir la reanudación tras inactividad (< 1 min). Requiere el despliegue.")
 def test_R10_url_publica_responde_y_reanuda_en_menos_de_un_minuto():
-    """R10 — Prueba prevista: acceso a la URL pública desde un equipo
+    """R10. Prueba prevista: acceso a la URL pública desde un equipo
     distinto al de desarrollo, sin instalación previa."""
 
 
 def test_R11_falsas_alarmas_por_dia_y_deriva_documentada(recursos):
-    """R11 — Prueba prevista: medición de la tasa de falsas alarmas del
+    """R11. Prueba prevista: medición de la tasa de falsas alarmas del
     detector no supervisado desagregada por día. Criterio: se reporta la tasa
     por día y se documenta la deriva como señal de re-entrenamiento."""
     fp = recursos["falsas_alarmas_dia"]
@@ -280,25 +280,25 @@ def test_R11_falsas_alarmas_por_dia_y_deriva_documentada(recursos):
 # ======================================================================
 
 def test_R12_cuatro_archivos_valido_faltante_vacio_invalido(demo_crudo, caracteristicas):
-    """R12 — Prueba prevista: carga de cuatro archivos: uno válido, uno con
+    """R12. Prueba prevista: carga de cuatro archivos: uno válido, uno con
     columnas faltantes, uno vacío y uno con valores inválidos. Criterio:
-    reporta el problema ANTES de clasificar, sin interrumpirse con un error."""
+    reporta el problema antes de clasificar, sin interrumpirse con un error."""
     # 1. válido
     ok = validacion.validar_y_preparar(como_archivo(demo_crudo), caracteristicas)
     assert not ok.bloqueado and ok.filas_validas == 499
 
-    # 2. columnas faltantes -> bloqueado con mensaje llano que nombra ejemplos
+    # 2. columnas faltantes: se bloquea con un mensaje en llano que nombra ejemplos
     recortado = demo_crudo.drop(columns=[c for c in demo_crudo.columns if "IAT" in c])
     falt = validacion.validar_y_preparar(como_archivo(recortado), caracteristicas)
     assert falt.bloqueado and any("Faltan" in m for _, m in falt.mensajes)
 
-    # 3. vacío (y solo encabezado) -> bloqueado, sin excepción
+    # 3. vacío (o solo con encabezado): se bloquea sin lanzar ninguna excepción
     import io
     assert validacion.validar_y_preparar(io.StringIO(""), caracteristicas).bloqueado
     assert validacion.validar_y_preparar(
         io.StringIO(",".join(demo_crudo.columns) + "\n"), caracteristicas).bloqueado
 
-    # 4. valores inválidos -> no bloquea, excluye esas filas y dice cuáles
+    # 4. valores inválidos: no se bloquea, se excluyen esas filas y se dice cuáles
     sucio = demo_crudo.copy().astype({" Flow Duration": "object"})
     sucio.loc[0, " Flow Duration"] = "no-es-numero"
     sucio.loc[1, " Flow Duration"] = "inf"
@@ -306,7 +306,7 @@ def test_R12_cuatro_archivos_valido_faltante_vacio_invalido(demo_crudo, caracter
     assert not inv.bloqueado and inv.filas_excluidas == 2 and inv.filas_validas == 497
     assert any("Filas afectadas: 1, 2" in m for _, m in inv.mensajes)
 
-    # extra: un archivo con columna de etiqueta se acepta y se avisa; basura no rompe
+    # extra: un archivo con columna de etiqueta se acepta con un aviso, y un archivo basura no rompe nada
     etiquetado = demo_crudo.copy(); etiquetado["Label"] = "BENIGN"
     lab = validacion.validar_y_preparar(como_archivo(etiquetado), caracteristicas)
     assert not lab.bloqueado and any("etiqueta" in m for _, m in lab.mensajes)
@@ -314,7 +314,7 @@ def test_R12_cuatro_archivos_valido_faltante_vacio_invalido(demo_crudo, caracter
 
 
 def test_R13_sin_valores_invalidos_tras_depurar(demo_crudo, caracteristicas):
-    """R13 — Prueba prevista: ejecución del script de limpieza sobre el
+    """R13. Prueba prevista: ejecución del script de limpieza sobre el
     consolidado, con verificación automática de que no quedan valores
     infinitos ni faltantes. Aquí: la misma regla aplicada a lo que sube el
     usuario (la parte reproducible sin los datos grandes)."""
@@ -332,15 +332,15 @@ def test_R13_sin_valores_invalidos_tras_depurar(demo_crudo, caracteristicas):
 @pytest.mark.datos_locales
 @pytest.mark.skipif(not RUTA_LIMPIO.exists(), reason="requiere data/interim/cicids2017_limpio.parquet (no viaja con el repo)")
 def test_R13_consolidado_limpio_sin_inf_nan_y_con_11_69_pct_menos(caracteristicas):
-    """R13 (parte pesada) — el Parquet limpio real no tiene Inf/NaN y refleja
-    la eliminación del 11,69 % de duplicados (2.830.743 → 2.498.078)."""
+    """R13 (parte pesada): el Parquet limpio real no tiene Inf/NaN y refleja
+    la eliminación del 11,69 % de duplicados (de 2.830.743 a 2.498.078 flujos)."""
     df = pd.read_parquet(RUTA_LIMPIO, columns=[c for c in caracteristicas if not c.endswith("_no_aplica")])
     assert len(df) == 2_498_078
     assert np.isfinite(df.to_numpy(dtype=np.float32)).all()
 
 
 def test_R14_cada_flujo_recibe_binaria_multiclase_y_confianza(demo_rica, recursos):
-    """R14 — Prueba prevista: clasificación del archivo de demostración,
+    """R14. Prueba prevista: clasificación del archivo de demostración,
     verificando que cada flujo recibe clase binaria, clase multiclase y nivel
     de confianza."""
     res = demo_rica["resultado"]
@@ -354,7 +354,7 @@ def test_R14_cada_flujo_recibe_binaria_multiclase_y_confianza(demo_rica, recurso
 
 
 def test_R15_umbral_ajustable_cambia_el_conteo(demo_rica, recursos):
-    """R15 — Prueba prevista: movimiento del control de umbral (0,5 % – 2 %)
+    """R15. Prueba prevista: movimiento del control de umbral (de 0,5 % a 2 %)
     verificando que el conteo de flujos marcados como anómalos cambia en
     consecuencia."""
     res = demo_rica["resultado"]
@@ -370,12 +370,12 @@ def test_R15_umbral_ajustable_cambia_el_conteo(demo_rica, recursos):
 @pytest.mark.manual
 @pytest.mark.skip(reason="R16 — manual: recorrido de navegación contando clics (resumen: 1, métricas: 2, explicación de una alerta: 3, exportar filtrado: 3).")
 def test_R16_resultados_clave_en_tres_clics_o_menos():
-    """R16 — Prueba prevista: recorrido de navegación contando los clics
+    """R16. Prueba prevista: recorrido de navegación contando los clics
     hasta cada resultado clave. Criterio: ≤ 3 clics."""
 
 
 def test_R17_filtrar_y_exportar_refleja_el_filtro(demo_rica, recursos):
-    """R17 — Prueba prevista: filtrado de la cola de alertas y descarga del
+    """R17. Prueba prevista: filtrado de la cola de alertas y descarga del
     archivo, verificando que refleja el filtro aplicado. Criterio: filtra por
     tipo, confianza y marca de anomalía; exporta resultados y métricas en CSV."""
     import io
@@ -400,7 +400,7 @@ def test_R17_filtrar_y_exportar_refleja_el_filtro(demo_rica, recursos):
 
 
 def test_R18_no_escribe_el_archivo_en_disco_y_usa_solo_metadatos(demo_crudo, caracteristicas, recursos):
-    """R18 — Prueba prevista: verificación de que la aplicación no escribe el
+    """R18. Prueba prevista: verificación de que la aplicación no escribe el
     archivo cargado en disco y de que ninguna característica usada contiene
     contenido del tráfico."""
     ignorar = (".venv", ".venv-app", "__pycache__", ".git", ".pytest_cache")
@@ -426,7 +426,7 @@ def test_R18_no_escribe_el_archivo_en_disco_y_usa_solo_metadatos(demo_crudo, car
 @pytest.mark.manual
 @pytest.mark.skip(reason="R19 — deseable, no verificable en este prototipo: requiere una API de scoring y un entorno SIEM de pruebas. La exportación CSV es la vía de esta iteración.")
 def test_R19_integracion_siem():
-    """R19 — Prueba prevista: no verificable en este prototipo."""
+    """R19. Prueba prevista: no verificable en este prototipo."""
 
 
 # ======================================================================
@@ -436,7 +436,7 @@ def test_R19_integracion_siem():
 @pytest.mark.manual
 @pytest.mark.skip(reason="R20 — manual: una persona ajena al proyecto, sin conocimientos de programación, completa cargar → revisar alertas → exportar sin asistencia.")
 def test_R20_usuario_ajeno_completa_el_recorrido_sin_ayuda():
-    """R20 — Prueba prevista: demostración con una persona ajena al proyecto."""
+    """R20. Prueba prevista: demostración con una persona ajena al proyecto."""
 
 
 PANTALLAS = ["panel_resumen", "pantalla_clasificacion", "pantalla_anomalias",
@@ -470,7 +470,7 @@ def _textos_visibles(nodo) -> list[str]:
 
 
 def test_R21_cada_pantalla_dice_que_muestra_y_como_leerlo():
-    """R21 — Prueba prevista: revisión de los textos de la interfaz por una
+    """R21. Prueba prevista: revisión de los textos de la interfaz por una
     persona ajena (parte manual). Aquí, la parte verificable por código:
     cada una de las seis pantallas abre con su título y, justo debajo, un
     texto que explica qué muestra (la redacción es libre: «Aquí encontrarás…»,
@@ -519,11 +519,11 @@ def test_R21_cada_pantalla_dice_que_muestra_y_como_leerlo():
 @pytest.mark.manual
 @pytest.mark.skip(reason="R21 (parte humana) — revisión de los textos por una persona ajena al proyecto.")
 def test_R21_revision_de_textos_por_persona_ajena():
-    """R21 — la parte que exige a una persona ajena."""
+    """R21, la parte que requiere a una persona ajena al proyecto."""
 
 
 @pytest.mark.manual
 @pytest.mark.skip(reason="R22 — manual: abrir el tablero desplegado en Chrome, Firefox y Edge de escritorio.")
 def test_R22_funciona_en_chrome_firefox_y_edge():
-    """R22 — Prueba prevista: apertura del tablero en Chrome, Firefox y Edge
+    """R22. Prueba prevista: apertura del tablero en Chrome, Firefox y Edge
     de escritorio."""

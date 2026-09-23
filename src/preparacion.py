@@ -1,12 +1,14 @@
 """Consolidación de los CSV crudos de CIC-IDS2017 en un único Parquet.
 
-Qué hace (y qué NO hace) esta fase:
-- SÍ: une los 8 CSV, normaliza nombres de columna y etiquetas, elimina la
-  columna 'Fwd Header Length' repetida (previa verificación de que es una
-  copia exacta), agrega la columna 'archivo_origen' y reduce los dtypes
-  (float64 -> float32, enteros al tipo más pequeño que no pierda datos).
-- NO: no elimina filas (duplicados, Inf, NaN, negativos se conservan tal
-  cual). Esas decisiones de limpieza se toman después del EDA, con evidencia.
+Lo que hace esta fase: une los 8 CSV, normaliza los nombres de columna y las
+etiquetas, elimina la columna 'Fwd Header Length' repetida (después de
+verificar que es una copia exacta), agrega la columna 'archivo_origen' y
+reduce los dtypes (de float64 a float32, y los enteros al tipo más pequeño que
+no pierda datos).
+
+Lo que no hace es eliminar filas. Los duplicados, Inf, NaN y negativos se
+conservan tal cual, porque esas decisiones de limpieza se toman después del
+EDA, con evidencia.
 
 Ejecutar desde la raíz del proyecto:
     python -m src.preparacion
@@ -51,7 +53,7 @@ def _preparar_archivo(ruta) -> tuple[pd.DataFrame, float]:
 
     df[COLUMNA_ETIQUETA] = normalizar_etiquetas(df[COLUMNA_ETIQUETA])
 
-    # Downcast: floats a float32; enteros al tipo más chico sin pérdida.
+    # Downcast: los floats pasan a float32 y los enteros al tipo más pequeño sin pérdida.
     for col in df.columns:
         if df[col].dtype == np.float64:
             df[col] = df[col].astype(np.float32)

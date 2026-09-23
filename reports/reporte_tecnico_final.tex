@@ -271,7 +271,7 @@ aplicó en consecuencia.
 \textbf{Modelo} & \textbf{Supuesto} & \textbf{Verificación} & \textbf{Tratamiento} \\
 \midrule
 Regresión logística & Separabilidad lineal de las clases &
-Curvas precision-recall por clase: Bot y Web Attack quedan en AP $\approx$ 0,2, indicando que \textbf{no} son linealmente separables &
+Curvas precision-recall por clase: Bot y Web Attack quedan en AP de 0,22 y 0,30, indicando que \textbf{no} son linealmente separables &
 Se conserva como referencia interpretable; se añade un modelo no lineal para las clases afectadas \\
 Regresión logística & Variables no redundantes (baja colinealidad) &
 45 pares con $|r| > 0{,}95$ sobre el conjunto de entrenamiento, agrupados en 13 bloques (Apéndice~\ref{ap:colinealidad}) &
@@ -292,7 +292,7 @@ Todos & Ausencia de valores no finitos &
 2.867 filas (0,10\%) con Inf/NaN en dos variables de tasa (divisiones por duración cero) &
 Eliminadas (1.563 de ellas en este paso; el resto ya había salido con los duplicados), con verificación automática de que no quedan \\
 Todos & Los valores numéricos representan magnitudes &
-El valor $-1$ en \texttt{Init\_Win\_bytes} no es una magnitud sino un código de ``no aplica'' ($\approx$40\% de las filas) &
+El valor $-1$ en \texttt{Init\_Win\_bytes} no es una magnitud sino un código de ``no aplica'' (51\% de las filas en \texttt{Init\_Win\_bytes\_backward} y 35\% en \texttt{Init\_Win\_bytes\_forward}) &
 Se convierte en indicador binario y el $-1$ pasa a 0 \\
 Todos & Independencia entre observaciones &
 330.995 filas duplicadas exactas (11,69\%) &
@@ -629,8 +629,9 @@ el usuario.
 
 \noindent\textbf{Detección no supervisada (R4):} El Isolation Forest,
 entrenado únicamente con tráfico benigno, detecta 89\% de los flujos de
-Heartbleed, 52\% de DoS slowloris y 48\% de Infiltration (justamente las
-familias que el modelo supervisado no pudo aprender) con un presupuesto de
+Heartbleed, 52\% de DoS slowloris y 48\% de Infiltration (Heartbleed e
+Infiltration son justamente las familias que el modelo supervisado no pudo
+aprender) con un presupuesto de
 1\% de falsas alarmas (umbral por cuantiles del lunes, Sección~\ref{sec:protocolo}). Su recall global es de 11,8\%, y se documenta
 explícitamente su punto ciego: es incapaz de detectar ataques camuflados
 (fuerza bruta, escaneo de puertos, botnet), porque en ellos cada flujo
@@ -1117,6 +1118,7 @@ todo por defecto.
 \texttt{p} & \texttt{2} & \texttt{2} & por defecto \\
 \end{longtable}
 
+\clearpage% el cuadro del protocolo empieza en pagina nueva para que no quede partido
 % Generado por reports/apendices/generar_apendices.py leyendo las constantes de src/.
 \begin{longtable}{L{2.9cm} L{3.5cm} L{4.3cm} L{3.2cm}}
 \caption{Parámetros del protocolo que no viven en los modelos serializados.}\label{tab:param-protocolo}\\
@@ -1131,7 +1133,7 @@ todo por defecto.
 \bottomrule
 \endfoot
 Partición única & \texttt{train\_test\_split} & test\_size=0.2; stratify=Label; random\_state=42 & \path{src/split.py} \\
-Validación cruzada & \texttt{StratifiedKFold} & n\_splits=5 (igual al defecto); shuffle=True; random\_state=42 & \path{src/experimentos.py}, \path{src/interpretabilidad.py}, \path{notebooks/02} \\
+Validación cruzada & \texttt{StratifiedKFold} & n\_splits=5 (igual al defecto); shuffle=True; random\_state=42 & \path{src/experimentos.py}, \path{src/interpretabilidad.py}, \path{notebooks/02_baseline.ipynb} \\
 Clasificador trivial (línea base) & \texttt{DummyClassifier} & strategy='most\_frequent' & \path{notebooks/02_baseline.ipynb} \\
 Importancia por permutación & \texttt{permutation\_\allowbreak importance} & scoring='f1\_macro'; n\_repeats=5 (igual al defecto); random\_state=42; n\_jobs=-1; una sola partición (300.000 flujos de la validación de la primera) & \path{src/interpretabilidad.py} \\
 Modelo explicado por permutación & \texttt{HistGradient\allowbreak Boosting\allowbreak Classifier} & binario; misma configuración del Cuadro~\ref{tab:param-hgb}; ajustado con el 80\,\% de la primera partición & \path{src/interpretabilidad.py} \\

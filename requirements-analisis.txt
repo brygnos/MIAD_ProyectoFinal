@@ -1,7 +1,8 @@
 # Entorno congelado con pip freeze (especificacion del prototipo, seccion 6).
 # Python 3.13. Los artefactos de models/ dependen de la version EXACTA de
 # scikit-learn listada aqui; el tablero la verificara al arrancar.
-# 110 paquetes (dependencias directas y transitivas).
+# 110 paquetes (dependencias directas y transitivas). pywinpty solo existe en
+# Windows, por eso lleva un marcador de plataforma: en Mac y Linux se omite.
 
 anyio==4.14.1
 argon2-cffi==25.1.0
@@ -83,7 +84,7 @@ pyparsing==3.3.2
 python-dateutil==2.9.0.post0
 python-json-logger==4.1.0
 pytz==2026.2
-pywinpty==3.0.5
+pywinpty==3.0.5; sys_platform == "win32"
 PyYAML==6.0.3
 pyzmq==27.1.0
 referencing==0.37.0

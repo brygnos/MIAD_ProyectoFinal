@@ -1,17 +1,17 @@
-"""Selección de features — Fase 2 (decisión tomada SOLO con entrenamiento).
+"""Selección de features (Fase 2). La decisión se tomó solo con el conjunto de entrenamiento.
 
-Sobre una muestra de 500.000 flujos del conjunto de ENTRENAMIENTO (semilla 42)
+Sobre una muestra de 500.000 flujos del conjunto de entrenamiento (semilla 42)
 se calcularon las correlaciones absolutas entre las 71 features numéricas del
 dataset limpio. Los 45 pares con |r| > 0.95 forman 13 grupos de features que
-miden (casi) lo mismo; de cada grupo se conserva UNA representante, elegida por
-interpretabilidad: el nombre más directo de explicar a un jurado no experto en
-redes. El resto se elimina porque dos columnas idénticas se "reparten" la
-importancia en los modelos y ensucian la interpretación.
+miden (casi) lo mismo, y de cada grupo se conserva una sola representante,
+elegida por interpretabilidad: el nombre más fácil de explicar a un jurado que
+no es experto en redes. El resto se elimina porque dos columnas idénticas se
+"reparten" la importancia en los modelos y ensucian la interpretación.
 
 Resultado: 71 - 23 eliminadas = 48 features finales.
 
-Los grupos pueden re-derivarse con `calcular_grupos()` para verificar que la
-lista de abajo corresponde a los datos (reproducibilidad).
+Los grupos se pueden volver a calcular con `calcular_grupos()` para verificar
+que la lista de abajo corresponde a los datos (reproducibilidad).
 """
 
 from collections import defaultdict
@@ -121,11 +121,11 @@ def features_finales(df: pd.DataFrame) -> list[str]:
 def calcular_grupos(
     df: pd.DataFrame, umbral: float = 0.95, n_muestra: int = 500_000
 ) -> list[set[str]]:
-    """Re-deriva los grupos de features correlacionadas (verificación).
+    """Vuelve a calcular los grupos de features correlacionadas (verificación).
 
     Devuelve las componentes conexas del grafo cuyos arcos son los pares de
     features numéricas con |r| > umbral, calculado sobre una muestra
-    reproducible de `df` (que debe ser el conjunto de ENTRENAMIENTO).
+    reproducible de `df` (que debe ser el conjunto de entrenamiento).
     """
     muestra = df.sample(n=min(n_muestra, len(df)), random_state=RANDOM_STATE)
     num = muestra.select_dtypes(include=[np.number])

@@ -1,18 +1,18 @@
-"""Limpieza del dataset consolidado — Fase 2.
+"""Limpieza del dataset consolidado (Fase 2).
 
-Aplica exactamente las 6 decisiones de limpieza aprobadas (documentadas en
-reports/bitacora_proyecto.md, Fase 0-1; las decisiones 5-parcial y 6 —poda por
-correlación y split— viven en src/features.py y src/split.py porque dependen
-SOLO del conjunto de entrenamiento):
+Aplica las decisiones de limpieza aprobadas (explicadas en la sección 2.2 de
+reports/informe_final.md). La poda por correlación y la división train/test
+también hacen parte de esas decisiones, pero están en src/features.py y
+src/split.py porque dependen solo del conjunto de entrenamiento.
 
-1. Eliminar filas duplicadas (ignorando `archivo_origen`). Motivo: una misma
-   fila repetida puede caer a la vez en entrenamiento y en prueba, y el modelo
-   "acertaría" por memoria, no por aprender (fuga de información).
-2. Eliminar filas con Inf o NaN en `Flow Bytes/s` / `Flow Packets/s`
+1. Eliminar las filas duplicadas (ignorando `archivo_origen`). El motivo es que
+   una misma fila repetida puede caer a la vez en entrenamiento y en prueba, y
+   el modelo "acertaría" porque la memorizó (fuga de información).
+2. Eliminar las filas con Inf o NaN en `Flow Bytes/s` / `Flow Packets/s`
    (divisiones entre duración 0; 0,10% de las filas).
-3. Eliminar filas con `Flow Duration` < 0 (error de captura).
-4. `Init_Win_bytes_forward/backward`: el −1 es un código de "no aplica", no un
-   número. Se crea un indicador binario `*_no_aplica` y el −1 pasa a 0.
+3. Eliminar las filas con `Flow Duration` < 0 (error de captura).
+4. `Init_Win_bytes_forward/backward`: el −1 es un código de "no aplica", así
+   que se crea un indicador binario `*_no_aplica` y el −1 pasa a 0.
 5. Eliminar las features constantes (mismo valor en todas las filas).
 
 Guarda el resultado en data/interim/ y reporta el efecto de cada paso.
@@ -52,7 +52,7 @@ def limpiar(df: pd.DataFrame, verbose: bool = True) -> pd.DataFrame:
     df = df.loc[df["Flow Duration"] >= 0]
     n3 = len(df)
 
-    # 4. Código -1 = "no aplica" -> indicador binario + 0
+    # 4. Código -1 = "no aplica": se crea un indicador binario y el -1 pasa a 0
     df = df.copy()
     for col in COLUMNAS_SENTINELA:
         df[f"{col}_no_aplica"] = (df[col] == -1).astype(np.int8)

@@ -1,29 +1,31 @@
-"""Experimentos de desbalance — Fase 3, pregunta 2 (tipo de ataque).
+"""Experimentos de desbalance (Fase 3, pregunta 2: tipo de ataque).
 
 Matriz de 2 x 4 combinaciones:
 
 - Eje A (capacidad del modelo): regresión logística (lineal, con escalado) y
-  HistGradientBoostingClassifier (árboles con boosting; no necesita escalado).
-- Eje B (técnica de desbalance): sin corrección / pesos de clase balanceados /
-  SMOTE en las clases minoritarias / submuestreo de BENIGN + SMOTE.
+  HistGradientBoostingClassifier (árboles con boosting, no necesita escalado).
+- Eje B (técnica de desbalance): sin corrección, pesos de clase balanceados,
+  SMOTE en las clases minoritarias, y submuestreo de BENIGN + SMOTE.
 
 Reglas metodológicas:
-- Solo el conjunto de ENTRENAMIENTO (el test sigue apartado).
-- Validación cruzada estratificada de 5 particiones (la MISMA semilla que las
-  líneas base), con las MISMAS 48 features.
-- Todo remuestreo va DENTRO del imblearn.Pipeline: se aplica únicamente al
-  tramo de entrenamiento de cada partición, nunca al de validación.
+- Solo se usa el conjunto de entrenamiento (el test sigue apartado).
+- Validación cruzada estratificada de 5 particiones (con la misma semilla de
+  las líneas base) y las mismas 48 features.
+- Todo el remuestreo va dentro del imblearn.Pipeline, así que se aplica
+  únicamente al tramo de entrenamiento de cada partición y nunca al de
+  validación.
 
-Elecciones de remuestreo (documentadas para el informe):
-- SMOTE eleva cada clase con menos de 20.000 casos hasta 20.000 (sintetiza
-  vecinos interpolados). No se iguala todo a BENIGN (1,3M): sería fabricar
-  ~14M de filas sintéticas, intratable y sin sustento.
-- El submuestreo reduce BENIGN a 200.000 casos ANTES de SMOTE, para que el
-  modelo no esté dominado por tráfico normal y el conjunto sea tratable.
+Elecciones de remuestreo:
+- SMOTE eleva cada clase con menos de 20.000 casos hasta 20.000 (crea ejemplos
+  sintéticos interpolando entre vecinos). No se iguala todo a BENIGN (1,3M)
+  porque eso sería fabricar ~14M de filas sintéticas, algo intratable y sin
+  sustento.
+- El submuestreo reduce BENIGN a 200.000 casos antes de SMOTE, para que el
+  modelo no quede dominado por el tráfico normal y el conjunto sea manejable.
 
-Cada combinación se evalúa partición por partición (para reportar media y
-desviación) y su resultado se guarda en data/interim/fase3/, de modo que el
-script es reanudable: las combinaciones ya calculadas no se repiten.
+Cada combinación se evalúa partición por partición (para reportar la media y
+la desviación) y su resultado se guarda en data/interim/fase3/. Así el script
+se puede reanudar, porque las combinaciones que ya se calcularon no se repiten.
 
 Ejecutar desde la raíz del proyecto:
     python -m src.experimentos
@@ -114,11 +116,11 @@ def construir_pipeline(modelo: str, tecnica: str) -> Pipeline:
 
 
 def evaluar_combinacion(modelo: str, tecnica: str, X, y) -> dict:
-    """Evalúa una combinación con CV estratificada de 5 folds.
+    """Evalúa una combinación con validación cruzada estratificada de 5 particiones.
 
-    Devuelve métricas POR PARTICIÓN (para media ± desviación) y las
-    predicciones/probabilidades out-of-fold (para matrices de confusión y
-    curvas PR agregadas).
+    Devuelve las métricas de cada partición (para la media ± desviación) y
+    las predicciones y probabilidades out-of-fold (para las matrices de
+    confusión y las curvas PR agregadas).
     """
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
     clases = np.unique(y)

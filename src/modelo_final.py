@@ -1,22 +1,23 @@
-"""Serialización de los modelos finales — Fase A del prototipo (§6 de la
-especificación, docs/especificacion_prototipo.md).
+"""Serialización de los modelos finales (Fase A del prototipo, §6 de la
+especificación en docs/especificacion_prototipo.md).
 
-Entrena con TODO el conjunto de entrenamiento y guarda en models/:
+Entrena con todo el conjunto de entrenamiento y guarda en models/:
 
-- modelo_multiclase.joblib : el campeón (HistGradientBoosting + pesos de
-  clase, 11 clases). Es el MISMO modelo, datos, semilla y versiones con los
-  que se produjo la evaluación final; re-entrenarlo aquí reproduce el
-  artefacto de forma determinista sin tocar el conjunto de prueba.
-- modelo_binario.joblib : ataque sí/no (mismo algoritmo y pesos).
-- detector_anomalias.joblib : dict con el Isolation Forest entrenado solo
-  con el tráfico benigno del lunes, su StandardScaler (ajustado solo con ese
+- modelo_multiclase.joblib: el mejor modelo (HistGradientBoosting + pesos de
+  clase, 11 clases). Es el mismo modelo, con los mismos datos, semilla y
+  versiones con los que se hizo la evaluación final, así que re-entrenarlo aquí
+  reproduce el artefacto de forma determinista sin tocar el conjunto de prueba.
+- modelo_binario.joblib: ataque sí/no (mismo algoritmo y pesos).
+- detector_anomalias.joblib: un dict con el Isolation Forest entrenado solo con
+  el tráfico benigno del lunes, su StandardScaler (ajustado solo con ese
   tráfico) y los umbrales por cuantiles 0,5% / 1% / 2% de sus propios scores.
-- metadatos.json : lo que el tablero necesita — lista ORDENADA de las 48
-  características, nombres de las clases, versión de scikit-learn, y la
-  regla de operación de Bot (alarma solo si P(Bot) >= 0,999; si no, la
-  segunda clase más probable), que es parte del modelo final oficial.
+- metadatos.json: lo que necesita el tablero, es decir, la lista ordenada de
+  las 48 características, los nombres de las clases, la versión de
+  scikit-learn y la regla de operación de Bot (alarma solo si
+  P(Bot) >= 0,999; si no, la segunda clase más probable), que hace parte del
+  modelo final oficial.
 
-El script es checkpointeado: si un artefacto ya existe, no lo re-entrena.
+El script usa checkpoints: si un artefacto ya existe, no lo vuelve a entrenar.
 No lee el conjunto de prueba ni recalcula ninguna cifra del proyecto.
 
 Ejecutar desde la raíz del proyecto:
@@ -53,7 +54,7 @@ ARCHIVO_METADATOS = RUTA_MODELOS / "metadatos.json"
 
 
 def _nuevo_hgb() -> HistGradientBoostingClassifier:
-    """La configuración exacta del campeón de la evaluación final."""
+    """La configuración exacta del mejor modelo de la evaluación final."""
     return HistGradientBoostingClassifier(
         max_iter=200, random_state=RANDOM_STATE, class_weight="balanced"
     )
@@ -65,7 +66,7 @@ def main() -> None:
     features = features_finales(train)
     X = train[features].astype(np.float32).values
 
-    # --- Clasificador multiclase (campeón) ---
+    # --- Clasificador multiclase (el mejor modelo) ---
     if ARCHIVO_MULTICLASE.exists():
         print("[ya existe] modelo multiclase", flush=True)
         clases_multiclase = joblib.load(ARCHIVO_MULTICLASE).classes_.tolist()
@@ -110,7 +111,7 @@ def main() -> None:
 
     # --- Metadatos para el tablero ---
     metadatos = {
-        "caracteristicas": features,  # lista ORDENADA: el tablero debe respetar este orden
+        "caracteristicas": features,  # lista ordenada: el tablero debe respetar este orden
         "clases_multiclase": clases_multiclase,
         "clases_binario": {"0": "Normal", "1": "Ataque"},
         "umbral_bot": UMBRAL_BOT,

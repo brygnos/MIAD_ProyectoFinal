@@ -1,4 +1,4 @@
-"""Evidencia de los apéndices del reporte técnico final (reports/reporte_tecnico_final.tex).
+"""Evidencia de los apéndices del reporte técnico final (reports/reporte_tecnico_final.pdf).
 
 Apéndice A — colinealidad. Re-deriva los bloques de variables con |r| > 0,95
 sobre la MISMA muestra con la que se tomó la decisión de poda 71 -> 48
@@ -36,11 +36,10 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.patches import Rectangle  # noqa: E402
-from sklearn.ensemble import HistGradientBoostingClassifier, IsolationForest  # noqa: E402
+from sklearn.ensemble import IsolationForest  # noqa: E402
 from sklearn.inspection import permutation_importance  # noqa: E402
 from sklearn.model_selection import StratifiedKFold, train_test_split  # noqa: E402
 from sklearn.neighbors import LocalOutlierFactor  # noqa: E402
-from sklearn.preprocessing import StandardScaler  # noqa: E402
 
 RAIZ = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ))
@@ -95,25 +94,6 @@ def valor(v) -> str:
 def defaults_de(cls_o_func) -> dict:
     sig = inspect.signature(cls_o_func.__init__ if inspect.isclass(cls_o_func) else cls_o_func)
     return {k: p.default for k, p in sig.parameters.items() if k != "self"}
-
-
-def filas_parametros(nombre_modelo: str, estimador, contexto: str) -> list[dict]:
-    """Una fila por parámetro, marcando explícito / por defecto."""
-    d = defaults_de(type(estimador))
-    filas = []
-    for k, v in estimador.get_params(deep=False).items():
-        por_defecto = d.get(k, object())
-        explicito = not (v is por_defecto or v == por_defecto)
-        filas.append({
-            "contexto": contexto,
-            "modelo": nombre_modelo,
-            "clase": type(estimador).__name__,
-            "parametro": k,
-            "valor": valor(v),
-            "valor_por_defecto": valor(por_defecto),
-            "origen": "explícito" if explicito else "por defecto",
-        })
-    return filas
 
 
 # ------------------------------------------------------------ Apéndice A: |r|
@@ -411,7 +391,7 @@ def apendice_b() -> None:
             return "imbalanced-learn " + tex(__import__("imblearn").__version__)
         return "scikit-learn " + tex(meta["version_sklearn"])
 
-    def cabecera(titulo, label, est, extra_cols=None):
+    def cabecera(titulo, label, est):
         n = len(est.get_params(deep=False))
         return [f"% Generado por reports/apendices/generar_apendices.py con get_params() sobre {titulo}.",
                 r"\begin{longtable}{L{3.9cm} L{3.7cm} L{3.0cm} L{2.4cm}}",
@@ -523,7 +503,7 @@ def apendice_b() -> None:
     # Constantes y llamadas del protocolo (no son estimadores)
     filas_const = [
         ("Partición única", r"\texttt{train\_test\_split}", f"test\\_size={PROPORCION_TEST}; stratify=Label; random\\_state={RANDOM_STATE}", r"\path{src/split.py}"),
-        ("Validación cruzada", r"\texttt{StratifiedKFold}", f"n\\_splits=5 (igual al defecto); shuffle=True; random\\_state={RANDOM_STATE}", r"\path{src/experimentos.py}, \path{src/interpretabilidad.py}, \path{notebooks/02}"),
+        ("Validación cruzada", r"\texttt{StratifiedKFold}", f"n\\_splits=5 (igual al defecto); shuffle=True; random\\_state={RANDOM_STATE}", r"\path{src/experimentos.py}, \path{src/interpretabilidad.py}, \path{notebooks/02_baseline.ipynb}"),
         ("Clasificador trivial (línea base)", r"\texttt{DummyClassifier}", "strategy='most\\_frequent'", r"\path{notebooks/02_baseline.ipynb}"),
         ("Importancia por permutación", r"\texttt{permutation\_\allowbreak importance}", f"scoring='f1\\_macro'; n\\_repeats=5 (igual al defecto); random\\_state={RANDOM_STATE}; n\\_jobs=-1; una sola partición ({N_VALIDACION_PERMUTACION:,} flujos de la validación de la primera)".replace(",", "."), r"\path{src/interpretabilidad.py}"),
         ("Modelo explicado por permutación", r"\texttt{HistGradient\allowbreak Boosting\allowbreak Classifier}", "binario; misma configuración del Cuadro~\\ref{tab:param-hgb}; ajustado con el 80\\,\\% de la primera partición", r"\path{src/interpretabilidad.py}"),

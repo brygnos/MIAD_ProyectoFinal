@@ -19,14 +19,14 @@ RUTA_FIGURAS = RUTA_REPORTES / "figures"
 # Semilla única para todo el proyecto (reproducibilidad total)
 RANDOM_STATE = 42
 
-# Nombre de la columna objetivo DESPUÉS de normalizar los nombres de columna
+# Nombre de la columna objetivo después de normalizar los nombres de columna
 COLUMNA_ETIQUETA = "Label"
 ETIQUETA_BENIGNA = "BENIGN"
 
 # Archivo consolidado que produce la fase de preparación
 ARCHIVO_CONSOLIDADO = RUTA_PROCESSED / "cicids2017_consolidado.parquet"
 
-# Fase 2: dataset limpio (decisiones aprobadas; ver reports/bitacora_proyecto.md, Fase 0-1)
+# Fase 2: dataset limpio (las decisiones de limpieza están en la sección 2.2 de reports/informe_final.md)
 ARCHIVO_LIMPIO = RUTA_INTERIM / "cicids2017_limpio.parquet"
 
 # Fase 2: split único train/test (test apartado hasta el final del proyecto)

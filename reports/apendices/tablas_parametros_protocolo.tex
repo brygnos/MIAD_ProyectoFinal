@@ -101,7 +101,7 @@
 \bottomrule
 \endfoot
 Partición única & \texttt{train\_test\_split} & test\_size=0.2; stratify=Label; random\_state=42 & \path{src/split.py} \\
-Validación cruzada & \texttt{StratifiedKFold} & n\_splits=5 (igual al defecto); shuffle=True; random\_state=42 & \path{src/experimentos.py}, \path{src/interpretabilidad.py}, \path{notebooks/02} \\
+Validación cruzada & \texttt{StratifiedKFold} & n\_splits=5 (igual al defecto); shuffle=True; random\_state=42 & \path{src/experimentos.py}, \path{src/interpretabilidad.py}, \path{notebooks/02_baseline.ipynb} \\
 Clasificador trivial (línea base) & \texttt{DummyClassifier} & strategy='most\_frequent' & \path{notebooks/02_baseline.ipynb} \\
 Importancia por permutación & \texttt{permutation\_\allowbreak importance} & scoring='f1\_macro'; n\_repeats=5 (igual al defecto); random\_state=42; n\_jobs=-1; una sola partición (300.000 flujos de la validación de la primera) & \path{src/interpretabilidad.py} \\
 Modelo explicado por permutación & \texttt{HistGradient\allowbreak Boosting\allowbreak Classifier} & binario; misma configuración del Cuadro~\ref{tab:param-hgb}; ajustado con el 80\,\% de la primera partición & \path{src/interpretabilidad.py} \\

@@ -1,14 +1,15 @@
-"""Split único train/test — Fase 2.
+"""División única train/test (Fase 2).
 
-Regla metodológica del proyecto: el conjunto de PRUEBA se aparta UNA sola vez
+Regla metodológica del proyecto: el conjunto de prueba se aparta una sola vez
 (20%, estratificado por clase, RANDOM_STATE=42) y no se toca hasta la
-evaluación final. Toda decisión dependiente de datos (selección de features,
-tuning, remuestreo) se toma únicamente sobre el conjunto de entrenamiento.
+evaluación final. Toda decisión que dependa de los datos (selección de
+features, ajuste de parámetros, remuestreo) se toma únicamente con el conjunto
+de entrenamiento.
 
-Los dos conjuntos se guardan en data/processed/ para que TODO el proyecto
+Los dos conjuntos se guardan en data/processed/ para que todo el proyecto
 (notebooks y scripts) use exactamente las mismas filas. Para evitar
-regenerarlos por accidente (lo que invalidaría cualquier resultado previo),
-el script se niega a sobrescribir si los archivos ya existen.
+regenerarlos por accidente (lo que invalidaría cualquier resultado anterior),
+el script se niega a sobrescribirlos si ya existen.
 
 Ejecutar desde la raíz del proyecto:
     python -m src.split

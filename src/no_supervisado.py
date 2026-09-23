@@ -1,26 +1,27 @@
-"""Pregunta 3 (detección no supervisada) — Fase 4. Cómputo checkpointeado.
+"""Pregunta 3 (detección no supervisada), Fase 4. Cómputo con checkpoints.
 
-Idea: entrenar un detector de anomalías usando ÚNICAMENTE el tráfico benigno
-del lunes (el único día sin ataques) que cae en el conjunto de entrenamiento,
-y preguntarle por el resto de la semana: ¿marca como "anómalos" los ataques
-que nunca vio, y cuántas falsas alarmas dispara sobre tráfico normal?
+La idea es entrenar un detector de anomalías usando únicamente el tráfico
+benigno del lunes (el único día sin ataques) que cae en el conjunto de
+entrenamiento, y probarlo con el resto de la semana: ¿marca como "anómalos"
+los ataques que nunca vio, y cuántas falsas alarmas genera sobre el tráfico
+normal?
 
 Decisiones metodológicas:
-- El escalado se ajusta SOLO con los benignos del lunes (el detector no puede
+- El escalado se ajusta solo con los benignos del lunes (el detector no puede
   ver estadísticas de los demás días).
-- Isolation Forest como modelo principal; Local Outlier Factor como contraste
-  (entrenado con una submuestra de 50.000 flujos: su costo de predicción crece
-  con el tamaño del conjunto de entrenamiento).
-- El umbral de anomalía se fija con cuantiles de los scores del PROPIO lunes
-  (0,5%, 1% y 2%): equivale al parámetro de contaminación y reconoce la
-  advertencia de la literatura de que el "benigno" del lunes puede contener
-  ataques sin etiquetar (Engelen 2021; Lanvin 2023). El umbral del 1% es el
-  de referencia.
-- La tasa de falsas alarmas sobre benignos se reporta POR DÍA/ARCHIVO: el
-  tráfico normal cambia entre días y eso infla las falsas alarmas.
-- El conjunto de PRUEBA sigue intacto: todo ocurre dentro del entrenamiento.
+- Isolation Forest como modelo principal y Local Outlier Factor como contraste
+  (entrenado con una submuestra de 50.000 flujos, porque su costo de
+  predicción crece con el tamaño del conjunto de entrenamiento).
+- El umbral de anomalía se fija con cuantiles de los scores del propio lunes
+  (0,5%, 1% y 2%). Esto equivale al parámetro de contaminación y tiene en
+  cuenta la advertencia de la literatura de que el "benigno" del lunes puede
+  contener ataques sin etiquetar (Engelen 2021; Lanvin 2023). El umbral de
+  referencia es el 1%.
+- La tasa de falsas alarmas sobre los benignos se reporta por día y archivo,
+  porque el tráfico normal cambia entre días y eso aumenta las falsas alarmas.
+- El conjunto de prueba sigue intacto: todo ocurre dentro del entrenamiento.
 
-Resultados: checkpoint joblib en data/interim/fase4/ y CSVs compactos en
+Resultados: checkpoint joblib en data/interim/fase4/ y CSVs resumidos en
 reports/resultados_fase4/.
 
 Ejecutar desde la raíz del proyecto:
@@ -67,7 +68,7 @@ def calcular() -> dict:
     print(f"Entrenamiento del detector: {len(X_lunes):,} benignos del lunes; "
           f"evaluación: {len(X_eval):,} flujos de martes-viernes", flush=True)
 
-    # Escalado ajustado SOLO con el lunes
+    # El escalado se ajusta solo con el lunes
     escalador = StandardScaler().fit(X_lunes)
     X_lunes = escalador.transform(X_lunes)
     X_eval = escalador.transform(X_eval)

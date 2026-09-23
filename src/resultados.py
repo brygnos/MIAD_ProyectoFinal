@@ -1,19 +1,20 @@
 """Agregación y exportación de los resultados de la Fase 3.
 
-Los experimentos (src/experimentos.py) guardan por combinación un archivo
-joblib grande (incluye probabilidades out-of-fold) en data/interim/fase3/.
-Ese formato es local y no se comparte. Este módulo lo condensa en CSVs de
-kilobytes dentro de reports/resultados_fase3/, que SÍ viajan con el repo:
+Los experimentos (src/experimentos.py) guardan por cada combinación un archivo
+joblib grande (incluye las probabilidades out-of-fold) en data/interim/fase3/.
+Ese formato es local y no se comparte, así que este módulo lo resume en CSVs de
+pocos kilobytes dentro de reports/resultados_fase3/, que sí viajan con el
+repositorio:
 
 - fase3_macro_f1.csv               media ± desviación por combinación
-- fase3_<métrica>_por_clase.csv    recall / precision / ap por clase (largo)
+- fase3_<métrica>_por_clase.csv    recall / precision / ap por clase (formato largo)
 - fase3_confusion__<combo>.csv     matriz de confusión out-of-fold por combinación
 - fase3_pr__<combo>.csv            puntos de la curva PR de las clases minoritarias
 
-Así, notebooks e informe se regeneran en segundos en cualquier máquina, sin
-re-entrenar nada.
+Así los notebooks y el informe se pueden regenerar en segundos en cualquier
+máquina, sin volver a entrenar nada.
 
-Ejecutar desde la raíz del proyecto (tras src.experimentos):
+Ejecutar desde la raíz del proyecto (después de src.experimentos):
     python -m src.resultados
 """
 

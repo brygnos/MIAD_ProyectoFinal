@@ -1,21 +1,21 @@
-"""Etiquetas derivadas para cada pregunta de negocio — Fase 2.
+"""Etiquetas derivadas para cada pregunta de negocio (Fase 2).
 
-Dos vistas del mismo dataset:
+Hay dos vistas del mismo dataset:
 
-- **Binaria (preguntas 1 y 3):** Normal (0) vs Ataque (1). TODAS las filas
-  participan, incluidas las clases ultra-raras.
+- **Binaria (preguntas 1 y 3):** Normal (0) vs Ataque (1). Participan todas las
+  filas, incluidas las clases extremadamente raras.
 - **Multiclase (pregunta 2):** el tipo de ataque. Decisiones documentadas:
   * Los 3 ataques web (Brute Force, XSS, Sql Injection) se agrupan en la
-    familia "Web Attack": por separado son demasiado pequeños (1.470/652/21
-    casos tras limpieza) y pertenecen al mismo dominio (ataques a la
-    aplicación web). En consecuencia, "SQL Injection" no existe como clase
-    propia del multiclase: sus casos quedan dentro de la familia.
-  * Heartbleed (11 casos) e Infiltration (36) quedan FUERA del multiclase:
-    con validación cruzada de 5 particiones aportarían ~2-7 casos por
-    partición y cualquier métrica por clase sería ruido. Sus filas se
-    excluyen del entrenamiento multiclase, pero SÍ cuentan en la vista
-    binaria (¿al menos se detectan como "ataque"?), que es donde se
-    reportan como limitación.
+    familia "Web Attack", porque por separado son demasiado pequeños
+    (1.470/652/21 casos después de la limpieza) y los tres atacan la
+    aplicación web. Por eso "SQL Injection" no existe como clase propia del
+    multiclase y sus casos quedan dentro de la familia.
+  * Heartbleed (11 casos) e Infiltration (36) quedan por fuera del multiclase,
+    porque con validación cruzada de 5 particiones aportarían ~2-7 casos por
+    partición y cualquier métrica por clase sería ruido. Sus filas se excluyen
+    del entrenamiento multiclase, pero sí cuentan en la vista binaria (para ver
+    si por lo menos se detectan como "ataque"), que es donde se reportan como
+    limitación.
 """
 
 import pandas as pd

@@ -7,7 +7,7 @@ enmarcado como **clasificación con desbalance de clases e interpretabilidad**.
 > **¿Qué abrir según quién eres?**
 > - **Quiero usar el tablero** → sección [Correr el tablero paso a paso](#correr-el-tablero-paso-a-paso) (o la URL pública, cuando esté desplegado)
 > - **Jurado / lectura rápida** → [reports/informe_final.md](reports/informe_final.md) (informe resumido del análisis)
-> - **Anexo técnico de experimentos** → [reports/reporte_tecnico_experimentos.pdf](reports/reporte_tecnico_experimentos.pdf) (reporte de implementación y experimentos, Módulo 2)
+> - **Anexo técnico de experimentos** → [reports/reporte_tecnico_final.pdf](reports/reporte_tecnico_final.pdf) (reporte técnico de experimentos, con los apéndices de colinealidad y de configuración de parámetros)
 > - **Qué debe hacer el tablero** → [docs/especificacion_prototipo.md](docs/especificacion_prototipo.md) (los 22 requerimientos y las 6 pantallas)
 > - **Verificar los requerimientos** → [tests/README.md](tests/README.md) y `python -m pytest -v`
 > - **Reproducir el análisis desde los datos crudos** → sección [Reproducir el análisis](#reproducir-el-análisis)
@@ -38,61 +38,90 @@ enmarcado como **clasificación con desbalance de clases e interpretabilidad**.
 ├── src/                 pipeline del análisis + modelo_final · preparar_demo
 ├── reports/
 │   ├── informe_final.md                  informe resumido del análisis (entrega)
-│   ├── reporte_tecnico_experimentos.pdf  anexo técnico de experimentos (entrega)
+│   ├── reporte_tecnico_final.pdf         anexo técnico: reporte de experimentos (entrega)
+│   ├── reporte_tecnico_final.tex         su fuente LaTeX (no viaja a la entrega)
+│   ├── reporte_tecnico_experimentos.pdf  versión calificada del Módulo 2 (registro)
 │   ├── reporte_tecnico_experimentos.tex  su fuente LaTeX (no viaja a la entrega)
 │   ├── bitacora_proyecto.md              evidencia del proceso, fase por fase (no viaja)
-│   ├── figures/                          las 17 figuras
+│   ├── apendices/                        script, tablas y CSV de los apéndices A y B
+│   ├── figures/                          las 18 figuras
 │   └── resultados_fase3/ _fase4/ _final/ resultados numéricos en CSV
-├── requirements.txt             entorno del TABLERO (liviano)
+├── requirements.in              dependencias directas del tablero (de aquí sale requirements.txt)
+├── requirements.txt             entorno del TABLERO (liviano, todo fijado)
 └── requirements-analisis.txt    entorno del ANÁLISIS (freeze completo)
 ```
 
 ## Entornos y dependencias (dos archivos, con una regla de oro)
 
-- **`requirements.txt`** — el TABLERO (streamlit, scikit-learn, pandas,
-  numpy, joblib, shap, pytest). Es lo que instala el hosting.
-- **`requirements-analisis.txt`** — el entorno completo congelado del
-  ANÁLISIS (notebooks y pipeline de `src/`).
+Hay dos archivos porque el tablero necesita poco y el análisis mucho: `requirements.txt` es liviano y es lo que instala el hosting, y `requirements-analisis.txt` es el entorno completo con el que se entrenaron los modelos.
+Para usar el tablero o correr las pruebas instala `requirements.txt`; para reproducir el análisis (notebooks y `src/`) instala `requirements-analisis.txt`.
+
+`requirements.txt` no se edita a mano: se genera desde `requirements.in` (las dependencias directas del tablero) con el comando de su encabezado, restringido a las versiones de `requirements-analisis.txt`, así que todo paquete que esté en los dos archivos queda en la misma versión.
 
 > ⚠️ **Regla no negociable:** `scikit-learn` debe ser **idéntico en ambos
 > archivos** (hoy: `1.9.0`) — de esa versión depende que los modelos de
-> `models/` carguen. Si se actualiza en uno, se actualiza en el otro y se
-> regeneran los modelos con `python -m src.modelo_final`.
+> `models/` carguen. Si se actualiza, se cambia en `requirements-analisis.txt`
+> y en `requirements.in`, se regenera `requirements.txt` y se regeneran los
+> modelos con `python -m src.modelo_final`.
 >
 > ⚠️ **Despliegue:** seleccionar **Python 3.13** en los ajustes avanzados del
 > hosting (la misma versión con la que se congeló el entorno).
 
 ## Correr el tablero paso a paso
 
-Procedimiento para **Windows**, desde cero, sin saber nada de Streamlit. Los
-comandos se escriben en **PowerShell** (busca "PowerShell" en el menú Inicio)
-y funcionan igual en el Símbolo del sistema. **No hace falta "activar" ningún
-entorno**: se llama directamente al programa dentro de la carpeta del entorno,
-que es la forma que no falla.
+Procedimiento desde cero, sin saber nada de Streamlit. Se necesita **Python
+3.13** instalado. En Windows los comandos se escriben en **PowerShell** (busca
+"PowerShell" en el menú Inicio); en Mac y Linux, en la **Terminal**. **No hace
+falta "activar" ningún entorno**: se llama directamente al programa dentro de la
+carpeta del entorno, que es la forma que no falla.
 
 **1. Ir a la carpeta del proyecto.** Todo se ejecuta desde la raíz, la carpeta
-que contiene `streamlit_app.py`:
+que contiene `streamlit_app.py`. Abre la terminal en la carpeta donde guardaste
+el proyecto y entra en él:
 
-```powershell
-cd C:\Users\bryan\code\MIAD_ProyectoFinal
+```bash
+cd MIAD_ProyectoFinal
 ```
 
 **2. Crear el entorno de la app (solo la primera vez).** Un "entorno" es una
-copia aislada de Python con las versiones exactas que el tablero necesita. Se
-crea con el Python instalado en la máquina (en esta, el de miniconda):
+copia aislada de Python con las versiones exactas que el tablero necesita.
+
+En Windows:
 
 ```powershell
-C:\Users\bryan\miniconda3\python.exe -m venv .venv-app
+python -m venv .venv-app
 .venv-app\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Tarda unos minutos y descarga ~300 MB. Si en tu máquina `python` sí está en
-el PATH, la primera línea puede ser simplemente `python -m venv .venv-app`.
+En Mac y Linux:
+
+```bash
+python3 -m venv .venv-app
+.venv-app/bin/python -m pip install -r requirements.txt
+```
+
+Tarda unos minutos y descarga ~300 MB. Si Windows responde `Python was not
+found`, escribe en la primera línea la ruta completa del Python instalado en
+tu equipo en lugar de `python` (con Anaconda o Miniconda es el `python.exe` que
+está en la carpeta donde se instaló).
+
+> **Mac con procesador Intel:** ahí el entorno del tablero no se puede
+> instalar, porque SHAP depende de `numba` y `numba` ya no publica versiones
+> para esa plataforma con Python 3.13. En ese caso usa la URL pública del
+> tablero. En Mac con Apple Silicon, Windows y Linux se instala sin problema.
 
 **3. Lanzar el tablero** (cada vez que quieras usarlo):
 
+En Windows:
+
 ```powershell
 .venv-app\Scripts\streamlit.exe run streamlit_app.py
+```
+
+En Mac y Linux:
+
+```bash
+.venv-app/bin/streamlit run streamlit_app.py
 ```
 
 **4. Abrir la URL** que aparece en la consola: normalmente
@@ -108,12 +137,13 @@ detiene.
 
 | Síntoma | Causa | Solución |
 |---|---|---|
-| `'streamlit' is not recognized…` o `No module named streamlit` | Se llamó a `streamlit` "a secas": el Python del sistema no lo tiene; solo el del entorno. | Usa la ruta completa como en el paso 3: `.venv-app\Scripts\streamlit.exe run streamlit_app.py`. Si la carpeta `.venv-app` no existe, vuelve al paso 2. |
-| `Python was not found; run without arguments to install from the Microsoft Store` | `python` no está en el PATH de esta máquina (el alias de la tienda lo intercepta). | En el paso 2 usa la ruta completa del intérprete (`C:\Users\bryan\miniconda3\python.exe`). |
+| `'streamlit' is not recognized…`, `command not found` o `No module named streamlit` | Se llamó a `streamlit` "a secas": el Python del sistema no lo tiene; solo el del entorno. | Usa la ruta completa como en el paso 3. Si la carpeta `.venv-app` no existe, vuelve al paso 2. |
+| `Python was not found; run without arguments to install from the Microsoft Store` | `python` no está en el PATH de esta máquina (el alias de la tienda lo intercepta). | En el paso 2 usa la ruta completa del Python instalado en tu equipo (ver la nota del paso 2). |
 | `Error: Invalid value: File does not exist: streamlit_app.py` | Estás en la carpeta equivocada. | `cd` a la raíz del proyecto (paso 1) y vuelve a lanzar. |
 | La consola dice `http://localhost:8502` (u otro número distinto de 8501) | **Ya tienes otro tablero corriendo** en el 8501 (otra consola abierta). Streamlit no avisa: salta al siguiente puerto en silencio. | Usa la URL que te muestra **esta** consola, o cierra la otra instancia (`Ctrl + C` en su consola) y relanza. Dos instancias con código distinto dan resultados confusos. |
 | Error raro (`KeyError`, pantalla a medias) en una pestaña que abriste hace días | Es una **pestaña vieja** apuntando a un servidor que ya no existe o que quedó con código antiguo en memoria. | Cierra esa pestaña, detén cualquier tablero abierto (`Ctrl + C`), relanza y abre la URL nueva. Recargar la página **no** basta si el servidor es viejo. |
 | Prefieres "activar" el entorno y `Activate.ps1` da `running scripts is disabled` | La política de PowerShell bloquea los scripts `.ps1`; y `activate.bat` **no funciona en PowerShell** (solo en cmd). | No hace falta activar: usa las rutas directas de estas instrucciones. Si insistes: `Set-ExecutionPolicy -Scope Process Bypass` y luego `.\.venv-app\Scripts\Activate.ps1`. |
+| Al instalar (paso 2) en Windows: `Could not install packages due to an OSError: [Errno 2] No such file or directory` con una ruta muy larga | Windows limita las rutas a 260 caracteres y algunos paquetes traen archivos internos con rutas largas; pasa si el proyecto está en una carpeta muy profunda. | Mueve la carpeta del proyecto a una ruta corta (por ejemplo, una carpeta `proyectos` directamente en la raíz del disco), borra la carpeta `.venv-app` y repite el paso 2. |
 | Advertencia amarilla al abrir: "Los modelos se guardaron con scikit-learn X y este servidor ejecuta Y" | El entorno tiene otra versión de scikit-learn. | Reinstala exactamente `requirements.txt` en `.venv-app` (paso 2, segunda línea). |
 | Cambiaste código en `app/` o `models/` y no se ven los cambios | El servidor guarda los modelos en memoria y no los recarga solo. | Detén el tablero (`Ctrl + C`) y relánzalo. |
 
@@ -131,29 +161,46 @@ detiene.
 
 ## Pruebas de los requerimientos
 
-Desde la raíz, con el entorno de la app activo:
+Desde la raíz, con el Python del entorno de la app. En Windows:
 
-```bash
-python -m pytest -v
+```powershell
+.venv-app\Scripts\python.exe -m pytest -v
 ```
 
-Cada prueba verifica un requerimiento (R1–R22) siguiendo su "prueba
+En Mac y Linux:
+
+```bash
+.venv-app/bin/python -m pytest -v
+```
+
+Cada prueba verifica un requerimiento (de R1 a R22) siguiendo su "prueba
 prevista"; 19 son automáticas y 6 se documentan como manuales (dependen del
 despliegue o de una persona ajena) y aparecen como omitidas con su razón.
-Detalle en [tests/README.md](tests/README.md).
+Dos de las automáticas (las versiones pesadas de R7 y R13) necesitan los datos
+del análisis en `data/`; en una copia sin esos datos también se omiten, y el
+resultado esperado es 17 pasadas y 8 omitidas. Detalle en
+[tests/README.md](tests/README.md).
 
 ## Reproducir el análisis
 
-Requiere el entorno completo del análisis (distinto al de la app):
+Requiere el entorno completo del análisis (distinto al de la app). En Windows:
 
 ```powershell
-C:\Users\bryan\miniconda3\python.exe -m venv .venv
+python -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements-analisis.txt
 ```
 
+En Mac y Linux:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-analisis.txt
+```
+
 Los pasos se lanzan con el Python de ese entorno, en este orden
-(`.venv\Scripts\python.exe -m src.preparacion`, etc.; abajo abreviado como
-`python`):
+(`.venv\Scripts\python.exe -m src.preparacion` en Windows o
+`.venv/bin/python -m src.preparacion` en Mac y Linux, etc.; abajo abreviado
+como `python`):
 
 ```bash
 python -m src.preparacion        # 1. consolida los 8 CSV                (~3 min)
@@ -166,6 +213,7 @@ python -m src.no_supervisado     # 7. pregunta 3 (Isolation Forest/LOF)  (~10 mi
 python -m src.evaluacion_final   # 8. ÚNICA evaluación sobre el test     (~2 min*)
 python -m src.modelo_final       # 9. serializa los modelos del tablero  (~1 min)
 python -m src.preparar_demo      # 10. genera los archivos de demo       (~1 min)
+python reports/apendices/generar_apendices.py  # 11. apéndices A y B del reporte técnico (~1 min)
 ```
 
 > El paso 8 se ejecutó **una sola vez** (regla del proyecto) y su checkpoint
