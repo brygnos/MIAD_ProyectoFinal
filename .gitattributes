@@ -8,3 +8,4 @@ reports/bitacora_proyecto.md export-ignore
 reports/reporte_tecnico_experimentos.tex export-ignore
 docs/guia_proyecto.md export-ignore
 reports/reporte_tecnico_final.tex export-ignore
+docs/guia_estilo.md export-ignore

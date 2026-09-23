@@ -881,3 +881,92 @@ Errores encontrados y corregidos:
 
 El reporte del Módulo 2 sigue congelado y conserva sus erratas (el "AP ≈ 0,2",
 el "≈40 %" y la frase de slowloris) como registro de lo calificado.
+
+
+---
+
+## Fase F — Revisión general previa al repositorio limpio (22 de septiembre de 2026)
+
+### Rutas y autoría
+
+Se buscaron rutas personales y nombres ("bryan", `C:\Users`, `C:/Users`,
+`miniconda3`, `/Users/`, `/home/` y letras de unidad) en todo lo que viajará al
+repositorio de entrega. Antes había 16 coincidencias en 5 archivos; después
+quedan solo las dos líneas `\author` de los reportes, que tienen al equipo
+completo (Mariana Pérez, Bryan Rodriguez y Daniela Zúñiga). No había código que
+construyera rutas desde el directorio de ejecución: `src/config.py`,
+`app/nucleo.py`, `tests/conftest.py` y `generar_apendices.py` se anclan a
+`Path(__file__)`, y el `.tex` compila igual desde la raíz del proyecto. Se
+cambiaron las rutas de ejemplo del README y se borraron cuatro salidas de
+advertencia de los notebooks 01 y 02 que mostraban rutas de instalación (el
+diff confirma que no cambió ninguna otra salida). En el README, "material de
+estudio del autor" quedó como "material de estudio".
+
+### Cifra del −1
+
+El reporte técnico final y el informe final dan ahora las dos cifras por
+columna, leídas del notebook 01: 51 % de las filas en `Init_Win_bytes_backward`
+(1.441.552) y 35 % en `Init_Win_bytes_forward` (1.001.189), de 2.830.743.
+
+### Dependencias
+
+- `requirements.in` guarda las 7 dependencias directas del tablero, y
+  `requirements.txt` se genera con
+  `uv pip compile requirements.in --python-version 3.13 --python-platform x86_64-unknown-linux-gnu -c requirements-analisis.txt -o requirements.txt`.
+- **No se usa `--universal`.** Con él, uv eligió numba 0.53.1 para todas las
+  plataformas (una versión que no se instala en Python 3.13). La causa es que
+  SHAP 0.52.0 pide en Mac con procesador Intel `numba<0.63` y `llvmlite<0.46`, y
+  ninguna numba de ese rango acepta numpy 2.5.1; uv busca una sola versión de
+  numba para todas las plataformas y arrastra la de Mac Intel a las demás. Se
+  probaron otras salidas (fijar numba, marcador en SHAP, restringir plataformas
+  en `uv.toml`) y ninguna funciona con `uv pip compile`.
+- Resuelto para Linux (la plataforma del hosting): 52 paquetes, ningún paquete
+  compartido con versión distinta, scikit-learn 1.9.0, numpy 2.5.1, scipy 1.18.0
+  y joblib 1.5.3. Para Mac con procesador Apple se resuelven exactamente las
+  mismas versiones (solo sobra `watchdog`, que streamlit no pide en macOS).
+- `requirements-analisis.txt` pasó a 132 paquetes: se le agregaron los 22 que
+  usa solo el tablero (streamlit, shap, pytest y sus dependencias) con las
+  versiones de `requirements.txt`, así que ahora es un superconjunto. Se instala
+  en Windows, Linux y Mac con procesador Apple; en Mac Intel ninguno de los dos
+  entornos se puede instalar (numba 0.67 no publica versiones para esa
+  plataforma).
+- Verificación en dos entornos temporales, creados fuera del repositorio y
+  borrados al terminar. Con el entorno instalado solo desde `requirements.txt`:
+  19 pruebas pasan y 6 se omiten, y el tablero en modo headless abre sus seis
+  pantallas sin errores ni `InconsistentVersionWarning`. Con el entorno
+  instalado solo desde `requirements-analisis.txt`: lo mismo, y además los
+  notebooks 03 a 06 regeneran sus 11 figuras idénticas píxel a píxel y los
+  mismos 1.908 números en las salidas.
+
+### Demos y archivos de etiquetas
+
+Se confirmó en el código que las demos vienen integradas (dos botones en la
+barra lateral) y que `src/preparar_demo.py` las muestrea del conjunto de prueba
+(`data/processed/test.parquet`). Se encontró un error: el tablero numera las
+filas desde 1 y los archivos de etiquetas desde 0, así que al comparar la misma
+fila se miraba otro flujo (la coincidencia caía al 48 %). Se numeraron desde 1
+los dos archivos de etiquetas y `preparar_demo.py`, sin cambiar ningún flujo ni
+ninguna etiqueta; alineadas, las etiquetas coinciden con el tablero en el
+97,6 % (demo rica) y el 99,6 % (demo realista) en la decisión ataque o normal.
+
+### Textos
+
+El README y `tests/README.md` se reescribieron con el estilo del equipo, sin
+cambiar comandos, rutas ni cifras (verificado contra el commit anterior). El
+README explica ahora desde el principio que el camino recomendado son las dos
+demos: qué son, en qué se diferencian (499 flujos con 39,9 % de ataque y 14
+tipos, frente a 500 flujos con 5,0 % de ataque y 10 tipos) y cómo usarlas. Las
+indicaciones de estilo, con ejemplos de antes y después, quedaron en
+`docs/guia_estilo.md` para escribir el manual de usuario con la misma voz. Los
+mensajes de las dos pruebas que se omiten sin datos explican ahora cómo generar
+esos datos.
+
+### Pendiente
+
+- Varias referencias en archivos que viajan apuntan a documentos que no viajan
+  (`reports/informe_final.md` y `docs/`): el README, los notebooks 01 y 06, y
+  `src/config.py`, `src/evaluacion_final.py`, `src/limpieza.py` y
+  `src/modelo_final.py`. Se resuelven cuando se decida dónde queda el contenido
+  del informe final.
+- La §8 del reporte técnico final, el despliegue, el manual de usuario y la
+  prueba con una persona ajena siguen pendientes.

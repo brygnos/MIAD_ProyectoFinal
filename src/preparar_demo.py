@@ -125,9 +125,10 @@ def generar(composicion: dict, nombre_flujos: str, nombre_etiquetas: str) -> Non
     demo.columns = [c[:-2] if _normalizar(c).endswith(".1") else c for c in demo.columns]
 
     demo.to_csv(archivo_flujos, index=False)
-    muestra[[COLUMNA_ETIQUETA]].rename(columns={COLUMNA_ETIQUETA: "etiqueta_real"}).to_csv(
-        archivo_etiquetas, index_label="fila"
-    )
+    # La fila se numera desde 1, igual que la columna "Fila del archivo" del tablero
+    etiquetas = muestra[[COLUMNA_ETIQUETA]].rename(columns={COLUMNA_ETIQUETA: "etiqueta_real"})
+    etiquetas.index = etiquetas.index + 1
+    etiquetas.to_csv(archivo_etiquetas, index_label="fila")
 
     n_ataque = int((muestra[COLUMNA_ETIQUETA] != "BENIGN").sum())
     print(f"{nombre_flujos}: {len(demo)} filas x {demo.shape[1]} columnas "

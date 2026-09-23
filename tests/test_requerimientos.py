@@ -180,7 +180,7 @@ def test_R07_semilla_fija_y_clasificacion_determinista(recursos, demo_rica, cara
 
 
 @pytest.mark.datos_locales
-@pytest.mark.skipif(not RUTA_TRAIN.exists(), reason="requiere data/processed/train.parquet (no viaja con el repo)")
+@pytest.mark.skipif(not RUTA_TRAIN.exists(), reason="requiere data/processed/train.parquet, que no viaja con el repo. Para generarlo, pon los 8 CSV de CIC-IDS2017 en data/raw/ y corre con el entorno del análisis: python -m src.preparacion, python -m src.limpieza y python -m src.split (ver 'Reproducir el análisis' en el README).")
 def test_R07_reentrenar_detector_reproduce_umbrales_exactos(recursos, caracteristicas):
     """R7 (parte pesada): re-ejecución real de una etapa del pipeline. El
     detector de anomalías se vuelve a entrenar con el lunes benigno y la
@@ -330,7 +330,7 @@ def test_R13_sin_valores_invalidos_tras_depurar(demo_crudo, caracteristicas):
 
 
 @pytest.mark.datos_locales
-@pytest.mark.skipif(not RUTA_LIMPIO.exists(), reason="requiere data/interim/cicids2017_limpio.parquet (no viaja con el repo)")
+@pytest.mark.skipif(not RUTA_LIMPIO.exists(), reason="requiere data/interim/cicids2017_limpio.parquet, que no viaja con el repo. Para generarlo, pon los 8 CSV de CIC-IDS2017 en data/raw/ y corre con el entorno del análisis: python -m src.preparacion y python -m src.limpieza (ver 'Reproducir el análisis' en el README).")
 def test_R13_consolidado_limpio_sin_inf_nan_y_con_11_69_pct_menos(caracteristicas):
     """R13 (parte pesada): el Parquet limpio real no tiene Inf/NaN y refleja
     la eliminación del 11,69 % de duplicados (de 2.830.743 a 2.498.078 flujos)."""
