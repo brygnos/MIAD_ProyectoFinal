@@ -5,7 +5,7 @@ Este es el único módulo del proyecto que calcula métricas con test.parquet
 demostración del tablero). Reglas:
 
 - El umbral de Bot (UMBRAL_BOT) se fijó antes, solo con las probabilidades
-  out-of-fold del entrenamiento (ver la sección 4.4 de reports/informe_final.md).
+  out-of-fold del entrenamiento (ver la sección 7 de reports/reporte_tecnico_final.pdf, ajuste 4).
   La alarma de Bot solo se emite si P(Bot) >= 0,999, y si no, el flujo se
   reasigna a la segunda clase más probable. Con las probabilidades out-of-fold
   del train ese punto da precisión 0,93 / recall 0,68 (con puerto) y

@@ -1,4 +1,4 @@
-# Entorno congelado con pip freeze (especificacion del prototipo, seccion 6).
+# Entorno congelado con pip freeze.
 # Python 3.13. Los artefactos de models/ dependen de la version EXACTA de
 # scikit-learn listada aqui; el tablero la verificara al arrancar.
 # 132 paquetes (dependencias directas y transitivas). Es un superconjunto de

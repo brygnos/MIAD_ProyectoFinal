@@ -50,7 +50,7 @@ reports/figures/*
 !reports/apendices/*.csv
 !reports/figures/*.png
 
-# El archivo de demostración del tablero SÍ se versiona (especificación §6)
+# Los archivos de demostración del tablero sí se versionan
 !data/demo/*.csv
 
 # ============================================

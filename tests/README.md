@@ -33,7 +33,7 @@ generar esos datos.
 | R5 | ✅ | El macro-F1 final supera 0,082 por más de 0,5, y la reducción de carga es > 90 % en la demo realista |
 | R6 | ✅ | Macro-F1 en test ≥ 0,94, también sin el puerto |
 | R7 | ✅ (+ pesada) | La semilla 42 está declarada, dos clasificaciones salen idénticas, y volver a entrenar el detector reproduce los umbrales decimal a decimal |
-| R8 | ✅ | Solo `evaluacion_final.py` evalúa el test (`preparar_demo.py` solo toma muestras, como lo permite el §6); el escalado y el remuestreo van dentro del pipeline; la prueba queda dentro de CV ± 3σ |
+| R8 | ✅ | Solo `evaluacion_final.py` evalúa el test (`preparar_demo.py` solo toma muestras del test para armar las demos); el escalado y el remuestreo van dentro del pipeline; la prueba queda dentro de CV ± 3σ |
 | R9 | ✅ parcial | 50.000 flujos en < 30 s **en local**; la medición definitiva se hace sobre el tablero desplegado |
 | R10 | ⏸ manual | Abrir la URL pública desde otro equipo; reanudación < 1 min |
 | R11 | ✅ | Está el CSV por día (8 tramos × 3 umbrales), con mediana ≈ 1 % y un tramo > 5 %; la pantalla lo muestra y explica la deriva |

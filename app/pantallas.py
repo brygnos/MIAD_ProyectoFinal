@@ -1,7 +1,7 @@
 """Pantallas del tablero. Cada una explica qué muestra y cómo leerla, define
 los términos técnicos en su primera aparición y distingue explícitamente qué
 viene del archivo del usuario y qué es resultado fijo de la evaluación del
-modelo (regla de autocontenido, §2 de la especificación)."""
+modelo, para que cada pantalla se entienda por sí sola."""
 
 import io
 from datetime import datetime

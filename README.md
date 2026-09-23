@@ -7,9 +7,8 @@ desbalance de clases e interpretabilidad**.
 
 > **Qué abrir según lo que necesites**
 > - **Usar el tablero:** la forma recomendada es con las dos demos que ya trae integradas, ver [Probar el tablero con las demos](#probar-el-tablero-con-las-demos). Para abrirlo en tu equipo sigue [Correr el tablero paso a paso](#correr-el-tablero-paso-a-paso), o usa la URL pública cuando esté desplegado.
-> - **Lectura rápida para el jurado:** [reports/informe_final.md](reports/informe_final.md), el informe resumido del análisis.
-> - **Anexo técnico de experimentos:** [reports/reporte_tecnico_final.pdf](reports/reporte_tecnico_final.pdf), el reporte técnico de experimentos con los apéndices de colinealidad y de configuración de parámetros.
-> - **Qué debe hacer el tablero:** [docs/especificacion_prototipo.md](docs/especificacion_prototipo.md), con los 22 requerimientos y las 6 pantallas.
+> - **Manual de usuario:** [docs/manual_usuario.md](docs/manual_usuario.md), con el uso del tablero, sus ventajas, sus limitaciones y las advertencias para el usuario.
+> - **Resultados y detalle técnico:** [reports/reporte_tecnico_final.pdf](reports/reporte_tecnico_final.pdf), el reporte técnico de experimentos. Los resultados sobre el conjunto de prueba están en la sección 7.1 y las conclusiones en la sección 9, y los apéndices tienen la evidencia de colinealidad y la configuración de parámetros.
 > - **Verificar los requerimientos:** [tests/README.md](tests/README.md) y `python -m pytest -v`.
 > - **Reproducir el análisis desde los datos crudos:** la sección [Reproducir el análisis](#reproducir-el-análisis).
 
@@ -72,19 +71,12 @@ que muestra el tablero, así que basta con buscar el mismo número.
 │   ├── demo/            las dos demos y sus etiquetas (versionadas)
 │   └── raw/ interim/ processed/   datos del análisis (no se versionan)
 ├── docs/
-│   ├── especificacion_prototipo.md   fuente de verdad del tablero
-│   ├── guia_proyecto.md              material de estudio (no viaja a la entrega)
-│   └── guia_estilo.md                guía de estilo de escritura (no viaja a la entrega)
+│   └── manual_usuario.md   manual de usuario del tablero
 ├── notebooks/           01_eda · 02_baseline · 03_desbalance ·
 │                        04_interpretabilidad · 05_no_supervisado · 06_evaluacion_final
 ├── src/                 pipeline del análisis, más modelo_final y preparar_demo
 ├── reports/
-│   ├── informe_final.md                  informe resumido del análisis (entrega)
-│   ├── reporte_tecnico_final.pdf         anexo técnico: reporte de experimentos (entrega)
-│   ├── reporte_tecnico_final.tex         su fuente LaTeX (no viaja a la entrega)
-│   ├── reporte_tecnico_experimentos.pdf  versión calificada del Módulo 2 (registro)
-│   ├── reporte_tecnico_experimentos.tex  su fuente LaTeX (no viaja a la entrega)
-│   ├── bitacora_proyecto.md              evidencia del proceso, fase por fase (no viaja)
+│   ├── reporte_tecnico_final.pdf         reporte técnico de experimentos
 │   ├── apendices/                        script, tablas y CSV de los apéndices A y B
 │   ├── figures/                          las 18 figuras
 │   └── resultados_fase3/ _fase4/ _final/ resultados numéricos en CSV
@@ -206,8 +198,8 @@ detiene.
 
 1. **Usar el tablero y leer** (no requiere datos). Lanza el tablero y pruébalo
    con las dos demos de la barra lateral. Los notebooks se entregan **ya
-   ejecutados**, con las tablas y figuras incluidas, y los informes tienen los
-   mismos resultados.
+   ejecutados**, con las tablas y figuras incluidas, y el reporte técnico tiene
+   los mismos resultados.
 2. **Verificar y volver a ejecutar lo liviano.** `python -m pytest -v` corre las
    pruebas de los 22 requerimientos en ~10 s, y los notebooks `03` a `06` leen
    solo los CSVs de `reports/resultados_*/` y corren en segundos.

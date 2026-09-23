@@ -1,7 +1,7 @@
 """Limpieza del dataset consolidado (Fase 2).
 
-Aplica las decisiones de limpieza aprobadas (explicadas en la sección 2.2 de
-reports/informe_final.md). La poda por correlación y la división train/test
+Aplica las decisiones de limpieza aprobadas (explicadas en la sección 4 de
+reports/reporte_tecnico_final.pdf, Cuadro 3). La poda por correlación y la división train/test
 también hacen parte de esas decisiones, pero están en src/features.py y
 src/split.py porque dependen solo del conjunto de entrenamiento.
 

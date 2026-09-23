@@ -963,10 +963,15 @@ esos datos.
 
 ### Pendiente
 
-- Varias referencias en archivos que viajan apuntan a documentos que no viajan
-  (`reports/informe_final.md` y `docs/`): el README, los notebooks 01 y 06, y
-  `src/config.py`, `src/evaluacion_final.py`, `src/limpieza.py` y
-  `src/modelo_final.py`. Se resuelven cuando se decida dónde queda el contenido
-  del informe final.
+- ~~Referencias a documentos que no viajan.~~ Resuelto en el commit
+  "Referencias a documentos que no viajan": el informe final, la bitácora y todo
+  `docs/` salvo el manual no viajan a la entrega. Las referencias a detalle
+  técnico apuntan ahora a `reports/reporte_tecnico_final.pdf` con su sección
+  (4 para la limpieza, 5.1 para el umbral del detector, 5.3 para las líneas
+  base, 7 y 7.1 para el umbral de Bot y los resultados, 8.3 para los riesgos,
+  2.1 para las preguntas), las de uso del tablero a `docs/manual_usuario.md`
+  (se creará en el repo de entrega), y las que no tenían equivalente se
+  quitaron. Si la §8 cambia de estructura al reescribirla, hay que revisar la
+  referencia a la sección 8.3 del notebook 01.
 - La §8 del reporte técnico final, el despliegue, el manual de usuario y la
   prueba con una persona ajena siguen pendientes.

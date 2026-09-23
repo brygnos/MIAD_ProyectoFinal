@@ -42,10 +42,10 @@ CLAVES_REQUERIDAS = frozenset({
 })
 
 # Etiquetas del deslizador de anomalías -> cuantil guardado con el detector.
-# Cada opción es un presupuesto explícito de falsas alarmas (ver §7).
+# Cada opción es un presupuesto explícito de falsas alarmas (ver la sección 5.1 del reporte técnico).
 CUANTILES = {"0,5%": "0.005", "1%": "0.01", "2%": "0.02"}
 
-# Cifras oficiales del proyecto (§10 de la especificación). No se recalculan.
+# Cifras oficiales del proyecto, las mismas del reporte técnico (secciones 5.3 y 7.1). No se recalculan.
 CIFRAS_OFICIALES = {
     "macro_f1_final": "0,975",
     "macro_f1_solo_ataques": "0,972",

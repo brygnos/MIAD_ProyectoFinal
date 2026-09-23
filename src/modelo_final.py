@@ -1,5 +1,4 @@
-"""Serialización de los modelos finales (Fase A del prototipo, §6 de la
-especificación en docs/especificacion_prototipo.md).
+"""Serialización de los modelos finales que usa el tablero (Fase A del prototipo).
 
 Entrena con todo el conjunto de entrenamiento y guarda en models/:
 

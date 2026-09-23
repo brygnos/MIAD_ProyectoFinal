@@ -142,7 +142,7 @@ def test_R05_supera_linea_base_trivial_y_reduce_carga_de_revision(metricas_test,
     mismo volumen. Criterio: supera sustancialmente la referencia 0,082 y
     reduce a segundos la priorización."""
     final = _macro(metricas_test, "con_puerto", "umbral_bot")
-    piso = 0.082  # cifra oficial (§10): clasificador trivial multiclase
+    piso = 0.082  # línea base del reporte técnico (sección 5.3): clasificador trivial multiclase
     assert final - piso > 0.5, f"{final} no supera sustancialmente {piso}"
 
     def reduccion(res):
@@ -209,8 +209,8 @@ def test_R08_anti_fuga_un_solo_lector_del_test_y_cv_coincide_con_prueba(metricas
     leer el conjunto de prueba) y comparación entre la validación cruzada y
     la prueba."""
     # (1) quién lee el test: solo evaluacion_final.py (la evaluación única) y
-    #     preparar_demo.py, al que la especificación le permite tomar muestras
-    #     del test para la demostración. Ningún otro módulo lo lee, y
+    #     preparar_demo.py, que solo toma muestras del test para armar las
+    #     demostraciones. Ningún otro módulo lo lee, y
     #     preparar_demo no calcula ninguna métrica con esos flujos.
     lectores = {}
     for f in sorted(SRC.glob("*.py")):

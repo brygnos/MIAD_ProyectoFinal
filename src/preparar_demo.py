@@ -1,4 +1,4 @@
-"""Archivos de demostración del tablero (prototipo, §6 de la especificación).
+"""Archivos de demostración del tablero (prototipo).
 
 Produce en data/demo/ dos demostraciones, cada una con sus etiquetas aparte:
 
