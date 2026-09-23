@@ -104,7 +104,7 @@ def _sin_archivo() -> None:
 def _nota_tres_modelos() -> None:
     """Explica por qué el clasificador de tipo reconoce 10 clases y no 14."""
     st.info(
-        "**Nota** Encontrarás que el tipo de ataque tiene 10 opciones en vez de 14"
+        "**Nota:** Encontrarás que el tipo de ataque tiene 10 opciones en vez de 14 "
         "como en el dataset. Esto es porque el "
         "clasificador de tipo aprendió 10: los 3 ataques web se "
         "agrupan en la familia 'Web Attack', y **Heartbleed** (11 casos en "
@@ -138,7 +138,7 @@ def panel_resumen(recursos, estado) -> None:
     st.header("Panel de resumen")
     st.caption(
         "Aquí encontrarás el resultado global del archivo que cargaste y cuánta "
-        "carga de revisión apróximada te ahorra la herramienta. Toda la información de esta pantalla "
+        "carga de revisión aproximada te ahorra la herramienta. Toda la información de esta pantalla "
         "sale **del archivo cargado**. ¡Prueba con los archivos demo si no tienes uno a la mano!"
     )
     if estado is None:
@@ -460,23 +460,24 @@ def _explicador(_modelo):
 def pantalla_interpretabilidad(recursos, estado) -> None:
     st.header("Interpretabilidad")
     st.caption(
-        "Qué muestra: en qué se fija el modelo — primero en general "
-        "(resultado fijo de la evaluación) y luego para **cada alerta "
-        "concreta de tu archivo**, para que puedas justificar una alerta "
-        "ante terceros."
+        "Aquí puedes ver en qué se fija el modelo para tomar sus decisiones. "
+        "Primero en general, con el resultado fijo de la evaluación, y luego "
+        "para **cada alerta de tu archivo**, de forma que puedas justificar "
+        "una alerta ante otras personas."
     )
 
     # ---- 1) global (fijo) ----
-    st.subheader("Qué distingue un ataque del tráfico normal (resultado fijo)")
+    st.subheader("Resultado Fijo: Qué distingue un ataque del tráfico normal")
     st.caption(
         "Fuente: la evaluación del proyecto. Esta tabla responde a la "
-        "pregunta general **¿en qué se nota que algo es un ataque?**, así que "
-        "se midió sobre el modelo que decide *ataque sí/no*. Se usó "
-        "*importancia por permutación*: se baraja una característica a la vez "
-        "(rompiendo su relación con la realidad) y se mide cuánto empeora el "
-        "modelo sobre flujos que nunca vio. Si empeora mucho, dependía de "
-        "ella. Más abajo, para cada alerta concreta, se explica la decisión "
-        "del **otro** modelo: el que asigna el tipo de ataque."
+        "pregunta general **¿en qué se nota que algo es un ataque?**, por eso "
+        "se midió sobre el modelo que decide *ataque sí/no*. Para medirlo "
+        "usamos la *importancia por permutación*, que consiste en barajar una "
+        "característica a la vez (rompiendo su relación con la realidad) y "
+        "medir cuánto empeora el modelo sobre flujos que nunca vio. Si empeora "
+        "mucho, quiere decir que dependía de esa característica. Más abajo, "
+        "para cada alerta de tu archivo, se explica la decisión del **otro** "
+        "modelo, que es el que asigna el tipo de ataque."
     )
     importancia = recursos["importancia"].head(10).copy()
     importancia["Característica"] = importancia["feature"].map(nombre_llano)
@@ -496,36 +497,36 @@ def pantalla_interpretabilidad(recursos, estado) -> None:
         },
     )
     st.caption(
-        "La barra es cuánto empeora el modelo al barajar esa característica "
-        "(medido en macro-F1, el puntaje que promedia qué tan bien se detecta "
-        "cada clase). Lectura general: para separar ataque de tráfico normal, "
-        "lo que más pesa es la **duración** de la conversación, la **puerta "
-        "contactada**, los **tamaños de los paquetes de respuesta** y el "
-        "**ritmo** — es decir, el comportamiento del tráfico."
+        "La barra indica cuánto empeora el modelo al barajar esa "
+        "característica (medido en macro-F1, el puntaje que promedia qué tan "
+        "bien se detecta cada clase). En general, para separar un ataque del "
+        "tráfico normal lo que más pesa es la **duración** de la conversación, "
+        "la **puerta contactada**, el **tamaño de los paquetes de respuesta** "
+        "y el **ritmo**, es decir, el comportamiento del tráfico."
     )
 
     st.markdown(
-        "**La prueba de honestidad con la puerta (puerto):** la segunda "
-        "característica más influyente es la puerta del servicio contactado — "
-        "y eso encendió una alarma metodológica, porque en el dataset cada "
-        "ataque usa siempre su puerta típica (el ataque web la 80, el de "
-        "acceso remoto la 22), cosa que en el mundo real nadie garantiza. "
-        "¿El modelo detecta comportamiento o memorizó puertas? Se reentrenó "
-        "**sin** esa característica: el desempeño pasó de 0,970 a 0,950 en "
-        "validación y de 0,967 a 0,942 en la prueba — una caída pequeña, no "
-        "un derrumbe. Conclusión: el modelo aprende **comportamiento**; la "
-        "puerta solo le ayuda a descartar falsas alarmas en las clases más "
-        "difíciles."
+        "**Prueba de la puerta (puerto de destino):** "
+        "La segunda característica más influyente es la puerta del servicio "
+        "contactado, y eso nos generó una duda metodológica, porque en el "
+        "dataset cada ataque usa siempre su puerta típica (el ataque web la "
+        "80, el de acceso remoto la 22), algo que en el mundo real nadie "
+        "garantiza. Para saber si el modelo detecta comportamiento o si "
+        "simplemente memorizó puertas, lo reentrenamos **sin** esa "
+        "característica y el desempeño pasó de 0,970 a 0,950 en validación y "
+        "de 0,967 a 0,942 en el test. Es una caída pequeña, lo que indica que "
+        "el modelo sí aprende **comportamiento** y que la puerta solo le ayuda "
+        "a descartar falsas alarmas en las clases más difíciles."
     )
 
     # ---- 2) individual (vivo) ----
     st.divider()
-    st.subheader("Por qué se marcó cada alerta (tu archivo)")
+    st.subheader("Por qué se marcó cada alerta (Archivo del Usuario)")
     st.caption(
         "Aquí se explica la decisión del modelo que asigna el **tipo** de "
-        "ataque — el mismo que produjo la columna 'Tipo de ataque' en la "
-        "pantalla de Alertas. Por eso los pesos de abajo se leen respecto al "
-        "tipo asignado a esa alerta, no respecto a 'ataque sí/no'."
+        "ataque, que es el mismo que produjo la columna 'Tipo de ataque' en "
+        "la pantalla de Alertas. Por eso los pesos de abajo se leen respecto "
+        "al tipo asignado a esa alerta y no respecto a 'ataque sí/no'."
     )
     if estado is None:
         _sin_archivo()
@@ -535,19 +536,19 @@ def pantalla_interpretabilidad(recursos, estado) -> None:
     if alertas.empty:
         st.info(
             "Tu archivo no generó alertas, así que no hay decisiones "
-            "individuales que explicar. Carga la demo rica en ataques para "
-            "ver esta sección en acción."
+            "individuales para explicar. Puedes cargar la demo rica en ataques "
+            "para ver cómo funciona esta sección."
         )
         return
 
     opciones = {
-        f"Fila {int(f.fila)} — {f.clase} (confianza {f.confianza:.0%})": int(f.fila)
+        f"Fila {int(f.fila)}: {f.clase} (confianza {f.confianza:.0%})": int(f.fila)
         for f in alertas.itertuples()
     }
     seleccion = st.selectbox(
         "Elige una alerta para ver qué pesó en esa decisión",
         list(opciones),
-        help="La explicación se calcula al momento para el flujo elegido "
+        help="La explicación se calcula en el momento para el flujo elegido "
              "(tarda milisegundos).",
     )
     fila = opciones[seleccion]
@@ -570,7 +571,7 @@ def pantalla_interpretabilidad(recursos, estado) -> None:
             "Valor en este flujo": [float(X[0, i]) for i in orden],
             "Peso en la decisión": [float(contribucion[i]) for i in orden],
             "Dirección": [
-                f"→ {clase_alerta}" if contribucion[i] > 0 else "← en contra"
+                f"A favor de {clase_alerta}" if contribucion[i] > 0 else "En contra"
                 for i in orden
             ],
         }
@@ -585,13 +586,14 @@ def pantalla_interpretabilidad(recursos, estado) -> None:
         },
     )
     st.caption(
-        "Cómo leerla: la técnica (SHAP) reparte la 'responsabilidad' de la "
-        "decisión entre las características del flujo. **Peso positivo "
-        f"(→ {clase_alerta})**: esa característica empujó al modelo hacia esa "
-        "clase. **Peso negativo (← en contra)**: empujó hacia otra clase. Se "
-        "muestran las 8 de mayor peso, con el valor que ese flujo tenía en "
-        "cada una. Así la alerta deja de ser un 'porque sí' y se vuelve un "
-        "argumento verificable ante un tercero."
+        "**Cómo leer la tabla:** la técnica que usamos (SHAP) reparte la "
+        "'responsabilidad' de la decisión entre las características del flujo. "
+        f"Un **peso positivo** (a favor de {clase_alerta}) significa que esa "
+        "característica empujó al modelo hacia esa clase, y un **peso "
+        "negativo** (en contra) significa que lo empujó hacia otra. Se "
+        "muestran las 8 características con más peso, junto con el valor que "
+        "tenía el flujo en cada una. De esta forma cada alerta viene con una "
+        "razón concreta que se puede revisar y explicar a otra persona."
     )
 
 
@@ -599,11 +601,11 @@ def pantalla_interpretabilidad(recursos, estado) -> None:
 def pantalla_alertas(recursos, estado) -> None:
     st.header("Alertas")
     st.caption(
-        "Qué muestra: la cola de flujos de **tu archivo** que merecen "
-        "revisión, con filtros para priorizar. Una *alerta* es un flujo que el "
-        "modelo clasificó como algún tipo de ataque; la marca de *anomalía* "
-        "señala, además, si su comportamiento se sale del patrón del tráfico "
-        "normal según un segundo detector independiente."
+        "Aquí encontrarás la lista de flujos de **tu archivo** que vale la "
+        "pena revisar, con filtros para priorizar. Una *alerta* es un flujo "
+        "que el modelo clasificó como algún tipo de ataque. La marca de "
+        "*anomalía* indica además si su comportamiento se sale del patrón del "
+        "tráfico normal, según un segundo detector independiente."
     )
     if estado is None:
         _sin_archivo()
@@ -619,9 +621,9 @@ def pantalla_alertas(recursos, estado) -> None:
     if alertas.empty:
         st.success(
             "El modelo no clasificó ningún flujo de tu archivo como ataque. "
-            "Recuerda el intercambio declarado en el Panel de resumen: esto "
-            "no garantiza que no exista nada malicioso, solo que nada superó "
-            "los criterios del modelo."
+            "Ten en cuenta el intercambio que se explica en el Panel de "
+            "resumen, esto no garantiza que no haya nada malicioso, solo que "
+            "ningún flujo superó los criterios del modelo."
         )
         return
 
@@ -633,12 +635,13 @@ def pantalla_alertas(recursos, estado) -> None:
                                help="Deja solo los tipos que quieres revisar.")
     conf_min = f2.slider(
         "Confianza mínima", 0.0, 1.0, 0.0, 0.05,
-        help="Oculta las alertas donde el modelo dudó más. 0 muestra todas.",
+        help="Oculta las alertas en las que el modelo tuvo más dudas. Con 0 "
+             "se muestran todas.",
     )
     filtro_anomalia = f3.selectbox(
         "Marca de anomalía", ["Todas", "Solo anómalas", "Solo no anómalas"],
-        help=f"Filtra por la marca del detector de anomalías (umbral actual: "
-             f"{umbral}, ajustable en la pantalla Detección de anomalías).",
+        help=f"Filtra según la marca del detector de anomalías (umbral actual: "
+             f"{umbral}, se puede ajustar en la pantalla Detección de anomalías).",
     )
 
     filtradas = alertas[alertas["clase"].isin(tipos_sel) & (alertas["confianza"] >= conf_min)]
@@ -661,8 +664,8 @@ def pantalla_alertas(recursos, estado) -> None:
     )
     if len(filtradas) == 0:
         st.info(
-            "Ningún flujo pasa el filtro actual. Afloja alguno de los tres "
-            "controles de arriba para volver a ver alertas."
+            "Ningún flujo cumple con el filtro actual. Prueba aflojando alguno "
+            "de los tres filtros de arriba para volver a ver alertas."
         )
     else:
         st.dataframe(
@@ -671,14 +674,14 @@ def pantalla_alertas(recursos, estado) -> None:
             hide_index=True, width="stretch",
         )
         st.caption(
-            "Cómo leerla — **Fila del archivo:** posición del flujo en tu CSV "
-            "(la primera fila de datos es la 1), para que puedas ubicarlo en "
-            "tu sistema. **Confianza:** probabilidad que el modelo asigna al "
-            "tipo de ataque elegido. **¿Ataque? y Prob. de ataque:** el "
-            "veredicto de un segundo modelo más simple que solo decide "
-            "ataque/normal. **Anómalo y Score:** el detector de anomalías; "
-            "score más bajo = comportamiento más raro frente al tráfico "
-            "normal."
+            "**Cómo leer la tabla:** **Fila del archivo:** posición del flujo "
+            "en tu CSV (la primera fila de datos es la 1), para que puedas "
+            "ubicarlo en tu sistema. **Confianza:** probabilidad que el modelo "
+            "le asigna al tipo de ataque elegido. **¿Ataque? y Prob. de "
+            "ataque:** el veredicto de un segundo modelo más simple que solo "
+            "decide si el flujo es ataque o normal. **Anómalo y Score:** el "
+            "resultado del detector de anomalías, donde un score más bajo "
+            "quiere decir un comportamiento más raro frente al tráfico normal."
         )
 
     # El filtro vigente queda disponible para la pantalla Reportes
@@ -710,15 +713,15 @@ def pantalla_alertas(recursos, estado) -> None:
 def pantalla_reportes(recursos, estado) -> None:
     st.header("Reportes")
     st.caption(
-        "Qué muestra: las descargas disponibles (siempre en CSV, un formato "
-        "de tabla que abre cualquier hoja de cálculo) y el historial de lo "
-        "que has hecho en esta sesión."
+        "Aquí encontrarás las descargas disponibles (siempre en CSV, un "
+        "formato de tabla que se abre con cualquier hoja de cálculo) y el "
+        "historial de lo que has hecho en esta sesión."
     )
     st.info(
-        "**Qué NO hay aquí, para que no lo busques:** no hay exportación en "
-        "PDF (el CSV cubre la necesidad y mantiene la herramienta liviana) y "
-        "el historial **no persiste entre sesiones** — al cerrar el navegador "
-        "se borra, junto con tu archivo. Si necesitas conservar un resultado, "
+        "**Nota:** la herramienta no exporta en PDF, ya que el CSV cubre la "
+        "necesidad y así se mantiene liviana. Además, el historial **no se "
+        "guarda entre sesiones**: al cerrar el navegador se borra junto con "
+        "tu archivo, así que si necesitas conservar algún resultado, "
         "descárgalo antes de salir."
     )
 
@@ -769,8 +772,9 @@ def pantalla_reportes(recursos, estado) -> None:
                 st.toast(f"Exportadas {len(filtradas):,} alertas.", icon="📄")
         else:
             c2.caption(
-                "Para exportar una selección, aplica primero un filtro en la "
-                "pantalla Alertas; aquí aparecerá con ese filtro respetado."
+                "Para exportar solo una parte de las alertas, aplica primero "
+                "un filtro en la pantalla Alertas y aquí aparecerá la descarga "
+                "con ese filtro."
             )
 
     metricas = recursos["metricas_clase"].copy()
@@ -781,7 +785,7 @@ def pantalla_reportes(recursos, estado) -> None:
         "Métricas del modelo por clase (resultado fijo de la evaluación)",
         data=buf3.getvalue().encode("utf-8-sig"),
         file_name="metricas_modelo.csv", mime="text/csv",
-        help="El desempeño del modelo en su examen final, por clase: no "
+        help="El desempeño del modelo en su test final, por clase. No "
              "depende de tu archivo.",
     )
 
@@ -790,8 +794,8 @@ def pantalla_reportes(recursos, estado) -> None:
         st.dataframe(pd.DataFrame(st.session_state.historial),
                      hide_index=True, width="stretch")
         st.caption(
-            "Cada fila es una acción de esta sesión: qué se clasificó o "
-            "exportó, cuántos flujos y alertas hubo, y con qué umbral de "
+            "Cada fila es una acción de esta sesión, con lo que se clasificó "
+            "o exportó, cuántos flujos y alertas había y con qué umbral de "
             "anomalía (el presupuesto de falsas alarmas elegido en la "
             "pantalla Detección de anomalías)."
         )

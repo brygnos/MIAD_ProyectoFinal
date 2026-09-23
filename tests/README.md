@@ -43,7 +43,7 @@ existen los datos grandes en `data/`; si no, se omiten con su razón.
 | R18 | ✅ | Procesar un archivo no crea ningún archivo en disco; las 48 características son numéricas y sin IPs, IDs ni contenido |
 | R19 | ⏸ no verificable | Integración SIEM: deseable; la exportación CSV es la vía de esta iteración |
 | R20 | ⏸ manual | Persona ajena completa cargar → revisar → exportar sin ayuda |
-| R21 | ✅ parcial + ⏸ | Las 6 pantallas declaran «qué muestra» y las métricas tienen glosa; la revisión por una persona ajena es manual |
+| R21 | ✅ parcial + ⏸ | Las 6 pantallas abren con título y una descripción de lo que muestran, las que tienen tablas traen su guía «Cómo leer» y las métricas tienen su explicación en llano (se revisa sobre el código, sin exigir frases exactas); la revisión por una persona ajena es manual |
 | R22 | ⏸ manual | Abrir el tablero desplegado en Chrome, Firefox y Edge |
 
 Las manuales aparecen en la salida como `SKIPPED` con la razón completa, para

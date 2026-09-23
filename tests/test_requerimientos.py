@@ -11,7 +11,7 @@ Ejecutar desde la raíz del proyecto, con el entorno de la app:
     python -m pytest -v
 """
 
-import re
+import ast
 import time
 from pathlib import Path
 
@@ -439,22 +439,81 @@ def test_R20_usuario_ajeno_completa_el_recorrido_sin_ayuda():
     """R20 — Prueba prevista: demostración con una persona ajena al proyecto."""
 
 
+PANTALLAS = ["panel_resumen", "pantalla_clasificacion", "pantalla_anomalias",
+             "pantalla_interpretabilidad", "pantalla_alertas", "pantalla_reportes"]
+
+
+LLAMADAS_DE_TEXTO = {"caption", "markdown", "info", "warning", "success", "error", "write", "toast"}
+
+
+def _textos_visibles(nodo) -> list[str]:
+    """La prosa que el tablero muestra dentro de `nodo` del árbol sintáctico:
+    los literales que se pasan a st.caption, st.markdown, st.info, etc., y a
+    los textos de ayuda (help=...). La concatenación implícita ya viene unida
+    y de los f-strings se toman sus partes fijas, así que una frase partida en
+    varias líneas del código se lee completa. Deja fuera docstrings,
+    comentarios y nombres de columnas."""
+    def literales(expr):
+        return [n.value for n in ast.walk(expr)
+                if isinstance(n, ast.Constant) and isinstance(n.value, str)]
+
+    textos = []
+    for llamada in (n for n in ast.walk(nodo) if isinstance(n, ast.Call)):
+        if getattr(llamada.func, "attr", None) in LLAMADAS_DE_TEXTO:
+            for arg in [*llamada.args, *(k.value for k in llamada.keywords)]:
+                textos += literales(arg)
+        else:
+            for k in llamada.keywords:
+                if k.arg == "help":
+                    textos += literales(k.value)
+    return textos
+
+
 def test_R21_cada_pantalla_dice_que_muestra_y_como_leerlo():
     """R21 — Prueba prevista: revisión de los textos de la interfaz por una
-    persona ajena (parte manual). Aquí, la parte verificable por código: las
-    seis pantallas declaran «qué muestra» y traen guías «cómo leer»; los
-    términos técnicos de las métricas tienen su glosa."""
-    fuente = (RAIZ / "app" / "pantallas.py").read_text(encoding="utf-8")
-    bloques = re.split(r"\ndef (panel_resumen|pantalla_[a-z_]+)\(", fuente)
-    cuerpos = dict(zip(bloques[1::2], bloques[2::2]))
-    assert set(cuerpos) >= {"panel_resumen", "pantalla_clasificacion", "pantalla_anomalias",
-                            "pantalla_interpretabilidad", "pantalla_alertas", "pantalla_reportes"}
-    for nombre, cuerpo in cuerpos.items():
-        assert "Qué muestra" in cuerpo, f"{nombre} no declara qué muestra"
-    for termino, glosa in {"macro-F1": "puntaje entre 0 y 1", "recall": "Detección",
-                           "precisión": "Acierto de la alarma", "SHAP": "responsabilidad",
-                           "Score de anomalía": "más bajo = más raro"}.items():
-        assert glosa in fuente, f"el término '{termino}' no tiene su glosa '{glosa}'"
+    persona ajena (parte manual). Aquí, la parte verificable por código:
+    cada una de las seis pantallas abre con su título y, justo debajo, un
+    texto que explica qué muestra (la redacción es libre: «Aquí encontrarás…»,
+    «Aquí puedes ver…»); las pantallas con tablas de resultados traen su guía
+    «Cómo leer»; y los términos técnicos de las métricas tienen su explicación
+    en lenguaje llano. Se verifica sobre el árbol sintáctico de pantallas.py y
+    no sobre frases exactas, para que reescribir los textos no rompa la prueba
+    mientras se conserve lo que exige el requerimiento."""
+    arbol = ast.parse((RAIZ / "app" / "pantallas.py").read_text(encoding="utf-8"))
+    funciones = {n.name: n for n in arbol.body if isinstance(n, ast.FunctionDef)}
+    assert set(PANTALLAS) <= set(funciones), set(PANTALLAS) - set(funciones)
+
+    # 1) título + descripción de qué muestra la pantalla
+    for nombre in PANTALLAS:
+        primeras = funciones[nombre].body[:2]
+        llamadas = [n.value for n in primeras
+                    if isinstance(n, ast.Expr) and isinstance(n.value, ast.Call)]
+        metodos = [getattr(c.func, "attr", None) for c in llamadas]
+        assert metodos == ["header", "caption"], (
+            f"{nombre} no abre con título y descripción (abre con {metodos})")
+        descripcion = " ".join(_textos_visibles(llamadas[1]))
+        assert len(descripcion) >= 80, f"la descripción de {nombre} es muy corta: {descripcion!r}"
+
+    # 2) guía de lectura en las pantallas con tablas de resultados
+    for nombre in ["pantalla_clasificacion", "pantalla_anomalias",
+                   "pantalla_interpretabilidad", "pantalla_alertas"]:
+        assert "Cómo leer" in " ".join(_textos_visibles(funciones[nombre])), (
+            f"{nombre} no trae su guía «Cómo leer»")
+
+    # 3) cada pantalla que usa un término técnico lo explica en llano en esa
+    #    misma pantalla (no basta con que la explicación esté en otra)
+    glosas = {"macro-F1": "promedia qué tan bien se detecta", "recall": "Detección",
+              "precisión": "Acierto de la alarma", "SHAP": "responsabilidad",
+              "Score de anomalía": "más bajo = más raro"}
+    usados = set()
+    for nombre in PANTALLAS:
+        texto = " ".join(_textos_visibles(funciones[nombre]))
+        for termino, glosa in glosas.items():
+            if termino in texto:
+                usados.add(termino)
+                assert glosa in texto, (
+                    f"{nombre} usa '{termino}' sin su explicación en llano ('{glosa}')")
+    assert usados == set(glosas), f"términos que ya no aparecen en ninguna pantalla: {set(glosas) - usados}"
 
 
 @pytest.mark.manual
