@@ -1,8 +1,16 @@
 % =====================================================================
-% Reporte de implementación y experimentos — Módulo 2
+% Reporte técnico de experimentos — anexo técnico de la ENTREGA FINAL
 % Proyecto Aplicado en Analítica de Datos (MIAD)
 %
+% Evoluciona a partir de reporte_tecnico_experimentos.tex (Módulo 2, 97/100),
+% que queda congelado como registro de lo calificado. Incorpora la
+% retroalimentación de esa entrega y de la anterior: explicación de los
+% umbrales por cuantiles (§5.1), Apéndice A (colinealidad) y Apéndice B
+% (configuración de parámetros, leída de los modelos y del código).
+% Las tablas de los apéndices las genera reports/apendices/generar_apendices.py.
+%
 % Las figuras se leen de ./figures/ (rutas relativas a este archivo).
+% Compilar: tectonic reporte_tecnico_final.tex  (o subir a Overleaf).
 % =====================================================================
 \documentclass[11pt,a4paper]{article}
 
@@ -36,10 +44,11 @@
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
 \newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
 
-\title{\vspace{-1.2cm}\textbf{Reporte de implementación y experimentos}\\[0.25cm]
+\title{\vspace{-1.2cm}\textbf{Reporte técnico de experimentos}\\[0.25cm]
 \large Detección de tráfico de red malicioso mediante clasificación\\
 \large con desbalance extremo de clases e interpretabilidad\\
-\large \vspace{0.3cm} Proyecto Aplicado en Analítica de Datos --- Módulo 2}
+\large \vspace{0.3cm} Proyecto Aplicado en Analítica de Datos --- Entrega final\\
+\normalsize Anexo técnico (ii): implementación y experimentos del prototipo}
 \author{Mariana Pérez\\Bryan Rodriguez\\Daniela Zúñiga}
 
 
@@ -265,17 +274,20 @@ Regresión logística & Separabilidad lineal de las clases &
 Curvas precision-recall por clase: Bot y Web Attack quedan en AP $\approx$ 0,2, indicando que \textbf{no} son linealmente separables &
 Se conserva como referencia interpretable; se añade un modelo no lineal para las clases afectadas \\
 Regresión logística & Variables no redundantes (baja colinealidad) &
-45 pares con $|r| > 0{,}95$ sobre el conjunto de entrenamiento, agrupados en 13 bloques &
-Poda a una representante por bloque: 71 $\rightarrow$ 48 variables \\
-Regresión logística, Isolation Forest & Variables en escala comparable &
+45 pares con $|r| > 0{,}95$ sobre el conjunto de entrenamiento, agrupados en 13 bloques (Apéndice~\ref{ap:colinealidad}) &
+Poda a una representante por bloque: 71 $\rightarrow$ 48 variables (Cuadro~\ref{tab:bloques} y Figura~\ref{fig:bloques}) \\
+Regresión logística & Variables en escala comparable &
 Rangos heterogéneos (microsegundos frente a conteos) &
-\texttt{StandardScaler} ajustado \emph{dentro} del pipeline de validación \\
+\texttt{StandardScaler} ajustado \emph{dentro} del pipeline de validación cruzada, solo con el tramo de entrenamiento de cada partición \\
+Isolation Forest & Variables en escala comparable &
+Los mismos rangos heterogéneos; aquí no hay validación cruzada &
+\texttt{StandardScaler} ajustado \emph{únicamente} con el tráfico benigno del lunes (394.236 flujos), el mismo con el que se entrena el detector \\
 HistGradient\-Boosting & Ninguno sobre escala o linealidad &
 Se verifica que el desempeño no dependa del escalado &
 No se escala; se conserva la escala original \\
 Isolation Forest & Las anomalías son pocas y estructuralmente distintas &
 Distribución de scores sobre tráfico conocido-benigno &
-Umbral fijado por cuantiles de esa distribución \\
+Umbral fijado por cuantiles de esa distribución (Sección~\ref{sec:protocolo}) \\
 Todos & Ausencia de valores no finitos &
 2.867 filas (0,10\%) con Inf/NaN en dos variables de tasa (divisiones por duración cero) &
 Eliminadas (1.563 de ellas en este paso; el resto ya había salido con los duplicados), con verificación automática de que no quedan \\
@@ -317,7 +329,7 @@ separabilidad lineal no se cumple para estas clases.}
 \section{Entrenamiento, validación, parametrización y métricas}
 % =====================================================================
 
-\subsection{Protocolo experimental}
+\subsection{Protocolo experimental}\label{sec:protocolo}
 
 \begin{itemize}
 \item \textbf{Partición única:} 80\% entrenamiento (1.998.462 flujos) y 20\%
@@ -325,11 +337,14 @@ prueba (499.616), estratificada por clase para preservar las proporciones
 incluso en las clases más raras. El conjunto de prueba se apartó una sola vez
 y \textbf{no se utilizó} durante todo el desarrollo.
 \item \textbf{Validación cruzada estratificada de 5 particiones} sobre el
-entrenamiento, para toda decisión: comparación de alternativas, selección de
-modelo y ajuste del punto de operación. Se reporta media $\pm$ desviación
-entre particiones.
+entrenamiento para la comparación de alternativas, la selección de modelo y
+el ajuste del punto de operación. Se reporta media $\pm$ desviación entre
+particiones. Una excepción, por costo computacional: la \emph{importancia por
+permutación} se midió con una sola partición ---modelo ajustado con el
+80\,\% de la primera y medido sobre 300.000 flujos de su validación---
+(Cuadro~\ref{tab:param-protocolo}).
 \item \textbf{Selección de variables:} 71 $\rightarrow$ 48, decidida
-\emph{únicamente} con el conjunto de entrenamiento (Cuadro~\ref{tab:supuestos}).
+\emph{únicamente} con el conjunto de entrenamiento (Cuadro~\ref{tab:supuestos}; evidencia en el Apéndice~\ref{ap:colinealidad}).
 \item \textbf{Control de fuga de información:} deduplicación previa a la
 partición; escalado y remuestreo \emph{dentro} del pipeline de validación, de
 modo que solo se ajustan con el tramo de entrenamiento de cada partición.
@@ -337,23 +352,63 @@ modo que solo se ajustan con el tramo de entrenamiento de cada partición.
 versiones exactas de dependencias.
 \end{itemize}
 
-\noindent\textbf{Parametrización:} El modelo de árboles usa 200 iteraciones y
-ponderación balanceada de clases. SMOTE eleva a 20.000 casos las clases con
-menos de ese umbral (igualarlas a la clase mayoritaria habría exigido
-fabricar $\approx$14 millones de filas sintéticas); el submuestreo reduce la
-clase benigna a 200.000 casos antes de aplicar SMOTE.
+\noindent\textbf{Parametrización:} El modelo de árboles se configura con un
+máximo de 200 iteraciones (\texttt{max\_iter=200}), ponderación balanceada de
+clases y semilla 42; el resto de sus parámetros queda en los valores por
+defecto de la librería. Con más de 10.000 observaciones, scikit-learn activa
+automáticamente la \textbf{parada temprana} (\texttt{early\_stopping='auto'}):
+reserva el 10\,\% del tramo de entrenamiento como validación interna y detiene
+el entrenamiento cuando la pérdida sobre esa validación deja de mejorar
+durante 10 iteraciones seguidas. Por eso 200 es un \emph{techo}, no el número
+de iteraciones usadas: el clasificador multiclase final se detuvo en
+\textbf{43 iteraciones} (473 árboles, uno por clase y por iteración) y el
+binario en \textbf{110}, cifras leídas del atributo \texttt{n\_iter\_} de los
+modelos serializados (Apéndice~\ref{ap:parametros}). SMOTE eleva a 20.000
+casos las clases con menos de ese umbral (igualarlas a la clase mayoritaria
+habría exigido fabricar $\approx$14 millones de filas sintéticas); el
+submuestreo reduce la clase benigna a 200.000 casos antes de aplicar SMOTE.
+
+\noindent\textbf{Cómo se fija el umbral del detector de anomalías (cuantiles
+del lunes):} El Isolation Forest no produce una etiqueta
+sino un \emph{score} de qué tan normal se ve cada flujo; para convertirlo en
+una decisión hace falta un corte, y ese corte se fija en cuatro pasos.
+(1)~El detector se entrena únicamente con el tráfico del \textbf{lunes}, el
+único día de la semana sin ataques (394.236 flujos benignos del conjunto de
+entrenamiento), con el escalado ajustado sobre ese mismo tráfico. (2)~Luego
+se le pide puntuar ese mismo tráfico conocido-normal, lo que produce una
+distribución empírica de los scores de flujos que \emph{sabemos} normales.
+(3)~El umbral se fija en un percentil de esa distribución (el 1\,\% como
+referencia; 0,5\,\% y 2\,\% como alternativas que el tablero permite elegir),
+de modo que, por construcción, exactamente ese porcentaje del tráfico
+conocido-normal queda por debajo del corte. (4)~Cualquier flujo de otro día
+cuyo score caiga por debajo del corte se marca como anómalo. La ventaja es
+que el umbral no es un número arbitrario sino un \textbf{presupuesto
+explícito de falsas alarmas}: elegir el 1\,\% significa ``acepto equivocarme
+en 1 de cada 100 flujos normales''. El valor numérico del corte (por ejemplo,
+$-0{,}614$ al 1\,\%) no tiene significado por sí mismo y por eso no se
+reporta como parámetro sino como consecuencia del percentil elegido. Fijarlo
+así reconoce además la advertencia de la literatura de que el ``benigno'' del
+lunes puede contener ataques sin etiquetar: el percentil asume explícitamente
+cierta contaminación en lugar de suponer un lunes perfectamente limpio. Y es
+lo que permite medir la deriva (R11): si en otro día la fracción de tráfico
+normal que cae bajo el corte se aleja del presupuesto, el tráfico normal
+cambió y el detector debe recalibrarse.
 
 \noindent\textbf{Calibración de hiperparámetros:} No se realizó una búsqueda
-exhaustiva de hiperparámetros de forma deliberada. Con los valores
-estándar el modelo ya superaba el requerimiento de desempeño por más de tres
-puntos de macro-F1, y la matriz de la Sección~\ref{sec:resultados} muestra
-que la variación atribuible a la familia de modelo y a la técnica de
-desbalance (de 0,543 a 0,970) domina ampliamente cualquier ganancia esperable
-de un ajuste fino de parámetros. El esfuerzo de calibración se dirigió, en
-cambio, donde el análisis mostró margen real: el \emph{punto de operación} de
-la clase Bot (Sección~\ref{sec:ajustes}, ajuste 4), fijado con datos de
-entrenamiento exclusivamente. Una búsqueda adicional habría añadido riesgo de
-sobreajustar al conjunto de validación a cambio de una ganancia marginal.
+exhaustiva de hiperparámetros, de forma deliberada. La configuración exacta
+con la que se entrenó cada modelo ---qué se fijó explícitamente y qué quedó en
+el valor por defecto de la librería, leída de los modelos serializados y del
+código, no reconstruida de memoria--- se reporta parámetro por parámetro en
+el Apéndice~\ref{ap:parametros}. Con esa configuración el modelo ya superaba
+el requerimiento de desempeño por más de tres puntos de macro-F1, y la matriz
+de la Sección~\ref{sec:resultados} muestra que la variación atribuible a la
+familia de modelo y a la técnica de desbalance (de 0,543 a 0,970) domina
+ampliamente cualquier ganancia esperable de un ajuste fino de parámetros. El
+esfuerzo de calibración se dirigió, en cambio, donde el análisis mostró
+margen real: el \emph{punto de operación} de la clase Bot
+(Sección~\ref{sec:ajustes}, ajuste 4), fijado con datos de entrenamiento
+exclusivamente. Una búsqueda adicional habría añadido riesgo de sobreajustar
+al conjunto de validación a cambio de una ganancia marginal.
 
 \subsection{Justificación de las métricas}
 
@@ -576,7 +631,7 @@ el usuario.
 entrenado únicamente con tráfico benigno, detecta 89\% de los flujos de
 Heartbleed, 52\% de DoS slowloris y 48\% de Infiltration (justamente las
 familias que el modelo supervisado no pudo aprender) con un presupuesto de
-1\% de falsas alarmas. Su recall global es de 11,8\%, y se documenta
+1\% de falsas alarmas (umbral por cuantiles del lunes, Sección~\ref{sec:protocolo}). Su recall global es de 11,8\%, y se documenta
 explícitamente su punto ciego: es incapaz de detectar ataques camuflados
 (fuerza bruta, escaneo de puertos, botnet), porque en ellos cada flujo
 individual parece normal y lo anómalo reside precisamente en el agregado. El recall
@@ -707,5 +762,386 @@ the Significant Differences in Detection Performances It Makes}. CRiSIS 2022.
 Interpreting Model Predictions}. Advances in Neural Information Processing
 Systems (NeurIPS).
 \end{itemize}
+
+% =====================================================================
+\clearpage
+\appendix
+% Cuadros y figuras de los apéndices se numeran A.1, B.1, ... para
+% distinguirlos de los del cuerpo del reporte.
+\renewcommand{\thetable}{\Alph{section}.\arabic{table}}
+\renewcommand{\thefigure}{\Alph{section}.\arabic{figure}}
+\setcounter{table}{0}\setcounter{figure}{0}
+\section{Evidencia de colinealidad: los 13 bloques de variables redundantes}
+\label{ap:colinealidad}
+% =====================================================================
+
+La retroalimentación pidió anexar una lista o mapa de correlaciones que
+respalde la poda de 71 a 48 variables (Cuadro~\ref{tab:supuestos}). Este
+apéndice la reproduce sobre los mismos datos con los que se tomó la decisión.
+
+\paragraph{Cómo se calculó.} Sobre una muestra de 500.000 flujos del
+\textbf{conjunto de entrenamiento} (semilla 42; el conjunto de prueba no
+participa) se calculó la correlación de Pearson en valor absoluto entre las 71
+variables numéricas del dataset depurado. Hay \textbf{45 pares} con
+$|r| > 0{,}95$. Si cada variable es un nodo y cada par por encima del umbral
+es un arco, esos 45 pares forman \textbf{13 componentes conexas}: los
+\emph{bloques} del Cuadro~\ref{tab:bloques}, que abarcan 36 variables. De
+cada bloque se conserva \textbf{una representante}, elegida por
+interpretabilidad (el nombre más directo de explicar a un lector no experto
+en redes), y se eliminan las otras 23: $71 - 23 = 48$. La razón de la poda es
+que dos columnas casi idénticas se reparten la importancia en los modelos y
+ensucian la interpretación; para la regresión logística, además, violan el
+supuesto de baja colinealidad.
+
+\paragraph{Cómo leer la figura.} La Figura~\ref{fig:bloques} muestra el mapa
+de $|r|$ entre las 36 variables implicadas, ordenadas bloque a bloque
+(representante primero, marcada con $\star$), con cada bloque recuadrado y
+los valores anotados dentro de él. Dos precisiones: (i)~un bloque es una
+componente conexa, así que dos variables del mismo bloque no tienen por qué
+superar 0,95 \emph{entre sí} ---por ejemplo, \texttt{Bwd Packet Length Mean} y
+\texttt{Bwd Packet Length Std} correlacionan 0,94, pero ambas superan 0,95 con
+\texttt{Bwd Packet Length Max}---; (ii)~fuera de los recuadros hay
+correlaciones altas pero por debajo del umbral (tonos medios), que
+deliberadamente no motivaron eliminaciones. La figura del análisis
+exploratorio (\texttt{02\_correlaciones\_redundantes.png}) usaba $|r| > 0{,}999$
+sobre una muestra del dataset completo y servía para ilustrar los alias
+exactos; la de este apéndice se calcula al umbral con el que realmente se
+decidió y solo sobre el entrenamiento, y coincide exactamente con el cuadro.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/18_correlaciones_train_095.png}
+\caption{Mapa de $|r|$ (correlación de Pearson en valor absoluto) entre las 36
+variables que participan en algún par con $|r| > 0{,}95$, sobre 500.000 flujos
+del conjunto de entrenamiento (semilla 42). Cada recuadro negro es uno de los
+13 bloques del Cuadro~\ref{tab:bloques}; $\star$ marca la representante
+conservada. Los valores anotados son los de cada bloque; fuera de los
+recuadros ninguna pareja supera el umbral.}
+\label{fig:bloques}
+\end{figure}
+
+\paragraph{Reproducibilidad.} Los bloques se re-derivan con
+\texttt{calcular\_grupos()} en \texttt{src/features.py} y el script
+\texttt{reports/apendices/generar\_apendices.py} verifica que coinciden uno a
+uno con la lista \texttt{GRUPOS\_CORRELACIONADOS} antes de dibujar la figura y
+escribir el cuadro; el detalle numérico por bloque queda en
+\texttt{reports/apendices/bloques\_correlacion\_train.csv}.
+
+{\footnotesize
+% Generado por reports/apendices/generar_apendices.py a partir de
+% GRUPOS_CORRELACIONADOS (src/features.py). No editar a mano.
+\begin{longtable}{C{0.6cm} L{3.0cm} L{4.2cm} L{6.3cm}}
+\caption{Los 13 bloques de variables redundantes ($|r| > 0{,}95$ sobre 500.000 flujos del conjunto de entrenamiento, semilla 42). Texto tomado literalmente de \texttt{GRUPOS\_CORRELACIONADOS} en \texttt{src/features.py}.}\label{tab:bloques}\\
+\toprule
+\textbf{\#} & \textbf{Representante conservada} & \textbf{Variables eliminadas} & \textbf{Razón de la elección} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{\#} & \textbf{Representante conservada} & \textbf{Variables eliminadas} & \textbf{Razón de la elección} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+1 & \texttt{Total Fwd Packets} & \texttt{Total Backward Packets}, \texttt{Subflow Fwd Packets}, \texttt{Subflow Bwd Packets}, \texttt{Subflow Bwd Bytes}, \texttt{Total Length of Bwd Packets}, \texttt{act\_data\_pkt\_fwd} & Todas cuentan volumen de la conversación y se mueven juntas; 'paquetes enviados por el origen' es el conteo más directo. Las 'Subflow *' son alias exactos de los totales. \\
+2 & \texttt{Flow IAT Max} & \texttt{Fwd IAT Max}, \texttt{Idle Max}, \texttt{Idle Mean}, \texttt{Idle Min} & Todas capturan el mayor silencio dentro de la conversación; 'Flow IAT Max' es la versión global. \\
+3 & \texttt{Bwd Packet Length Mean} & \texttt{Avg Bwd Segment Size}, \texttt{Bwd Packet Length Max}, \texttt{Bwd Packet Length Std} & Tamaño de los paquetes de respuesta; 'Avg Bwd Segment Size' es un alias exacto de la media, y máximo/desviación van casi pegados a ella. \\
+4 & \texttt{Total Length of Fwd Packets} & \texttt{Subflow Fwd Bytes} & Alias exacto (r=1.000); se conserva el nombre directo: bytes enviados por el origen. \\
+5 & \texttt{Fwd Packet Length Mean} & \texttt{Avg Fwd Segment Size} & Alias exacto (r=1.000) del tamaño medio de paquete de ida. \\
+6 & \texttt{Fwd URG Flags} & \texttt{CWE Flag Count} & Idénticas en los datos (r=1.000); se conserva la bandera TCP estándar (URG), mejor documentada que el conteo 'CWE'. \\
+7 & \texttt{SYN Flag Count} & \texttt{Fwd PSH Flags} & Idénticas en los datos (r=1.000); SYN (inicio de conexión) es clave para explicar escaneos de puertos. \\
+8 & \texttt{RST Flag Count} & \texttt{ECE Flag Count} & Idénticas en los datos (r=1.000); RST (conexión rechazada/cortada) es la más interpretable. \\
+9 & \texttt{Flow Duration} & \texttt{Fwd IAT Total} & r=0.999; la duración de la conversación es la feature más fácil de explicar del dataset. \\
+10 & \texttt{Packet Length Mean} & \texttt{Average Packet Size} & r=0.998; son dos fórmulas casi iguales del tamaño medio de paquete. \\
+11 & \texttt{Max Packet Length} & \texttt{Packet Length Std} & r=0.984; el máximo es más directo de explicar que la desviación. \\
+12 & \texttt{Flow Packets/s} & \texttt{Fwd Packets/s} & r=0.983; se conserva el ritmo global de la conversación. \\
+13 & \texttt{Fwd Packet Length Max} & \texttt{Fwd Packet Length Std} & r=0.969; mismo criterio: máximo antes que desviación. \\
+\end{longtable}
+}
+
+% =====================================================================
+\section{Configuración de parámetros}
+\label{ap:parametros}
+\setcounter{table}{0}\setcounter{figure}{0}
+% =====================================================================
+
+La retroalimentación pidió reportar la configuración de los parámetros en
+lugar de decir que se usaron ``valores estándar''. Nada de lo que sigue se
+escribió de memoria: las tablas de los modelos desplegados se generaron
+leyendo \texttt{get\_params()} y los atributos ajustados de los archivos de
+\texttt{models/}; las del protocolo, instanciando los estimadores con la misma
+función del código que los construyó en los experimentos
+(\texttt{construir\_pipeline} en \texttt{src/experimentos.py}) y leyendo las
+constantes de \texttt{src/}. El script que lo hace es
+\texttt{reports/apendices/generar\_apendices.py}; su salida tabular completa
+(264 filas) está en \texttt{reports/apendices/parametros\_modelos.csv}.
+
+\textbf{Qué significa ``explícito''.} Un parámetro se marca como explícito
+cuando está \emph{escrito en la llamada del código fuente} (el script lee las
+llamadas de \texttt{src/} con el analizador sintáctico de Python y las registra
+en \texttt{llamadas\_en\_codigo.csv}), aunque el valor escrito coincida con el
+valor por defecto de la librería: es el caso de \texttt{n\_neighbors=20} en el
+Local Outlier Factor, de \texttt{n\_splits=5} en la validación cruzada y de
+\texttt{n\_repeats=5} en la importancia por permutación, que se señalan como
+``explícito (igual al defecto)''. ``Por defecto'' significa que el código no
+lo escribe y rige el valor de la librería.
+
+\subsection{Iteraciones reales y parada temprana}
+
+Es el punto donde la lectura del código corrige al documento anterior, que
+decía que el modelo de árboles ``usa 200 iteraciones''. En realidad
+\texttt{max\_iter=200} es un \textbf{máximo}. \texttt{HistGradientBoosting}
+trae \texttt{early\_stopping='auto'}, que se activa cuando hay más de 10.000
+observaciones ---siempre, en este proyecto---: reserva el 10\,\% del tramo de
+entrenamiento (\texttt{validation\_fraction=0.1}) como validación interna,
+ajusta los árboles con el 90\,\% restante y se detiene cuando la pérdida en esa
+validación no mejora en más de \texttt{tol}~$=10^{-7}$ durante
+\texttt{n\_iter\_no\_change}~$=10$ iteraciones seguidas. El
+Cuadro~\ref{tab:iteraciones} resume lo que ocurrió con los modelos
+serializados (entrenados con todo el conjunto de entrenamiento, los mismos que
+usa el tablero). Los modelos de cada partición de la validación cruzada no se
+conservaron (solo sus métricas), por lo que su número exacto de iteraciones no
+se reporta; usaron la misma configuración y el mismo techo.
+
+\begin{table}[H]
+\centering
+\caption{Iteraciones realmente usadas por los modelos serializados, leídas del
+atributo \texttt{n\_iter\_}. ``Mejor iteración'' es la de menor pérdida en la
+validación interna; el entrenamiento se detuvo 10 iteraciones después.}
+\label{tab:iteraciones}
+\footnotesize
+\begin{tabular}{L{3.4cm} C{1.2cm} C{1.8cm} C{2.0cm} C{1.8cm} C{2.8cm}}
+\toprule
+\textbf{Modelo} & \textbf{Techo} & \textbf{Parada temprana} & \textbf{Iteraciones usadas} & \textbf{Mejor iteración} & \textbf{Árboles} \\
+\midrule
+Clasificador multiclase & 200 & activa & \textbf{43} & 33 & 473 (11 por iteración) \\
+Clasificador binario & 200 & activa & \textbf{110} & 100 & 110 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Modelos desplegados (leídos de \texttt{models/})}
+
+Los dos cuadros siguientes listan \emph{todos} los parámetros de los objetos
+serializados. Los dos clasificadores comparten exactamente la misma
+configuración (se verifica por código), así que van en un solo cuadro con los
+atributos ajustados de cada uno en columnas. Los únicos parámetros escritos en
+el código son: en los clasificadores, \texttt{class\_weight='balanced'},
+\texttt{max\_iter=200} y \texttt{random\_state=42}; en el Isolation Forest,
+\texttt{n\_estimators=200}, \texttt{random\_state=42} y \texttt{n\_jobs=-1}
+(este último solo reparte el cómputo entre núcleos; no cambia el resultado).
+En el Isolation Forest, \texttt{contamination='auto'} queda en su valor por
+defecto porque \emph{no se usa}: el corte lo fija el percentil de los scores
+del lunes (Sección~\ref{sec:protocolo}); y \texttt{max\_samples='auto'}
+significa 256 flujos por árbol, el valor que la librería fija para ese modo.
+% Generado por reports/apendices/generar_apendices.py.
+Los dos \texttt{StandardScaler} del proyecto ---el del detector, serializado en \texttt{models/}, y el que precede a la regresión logística dentro de cada partición--- se instancian sin argumentos y quedan enteramente por defecto (\texttt{copy=True}, \texttt{with\_mean=True}, \texttt{with\_std=True}). El del detector se ajustó con los 394.236 flujos benignos del lunes (\texttt{n\_samples\_seen\_}) y 48 variables.
+
+{\footnotesize\renewcommand{\arraystretch}{1.05}
+% Generado por reports/apendices/generar_apendices.py con get_params() sobre Clasificadores multiclase y binario (misma configuración).
+\begin{longtable}{L{3.9cm} L{3.7cm} L{3.0cm} L{2.4cm}}
+\caption{Clasificadores multiclase y binario (misma configuración): \texttt{HistGradientBoostingClassifier}, 21 parámetros. En \textbf{negrilla}, los escritos en la llamada del código (aunque coincidan con el valor por defecto); el resto quedó en el valor por defecto de scikit-learn 1.9.0.}\label{tab:param-hgb}\\
+\toprule
+\textbf{Parámetro} & \textbf{Valor usado} & \textbf{Valor por defecto} & \textbf{Origen} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Parámetro} & \textbf{Valor usado} & \textbf{Valor por defecto} & \textbf{Origen} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\texttt{categorical\_features} & \texttt{'from\_dtype'} & \texttt{'from\_dtype'} & por defecto \\
+\textbf{\texttt{class\_weight}} & \textbf{\texttt{'balanced'}} & \texttt{None} & explícito \\
+\texttt{early\_stopping} & \texttt{'auto'} & \texttt{'auto'} & por defecto \\
+\texttt{interaction\_cst} & \texttt{None} & \texttt{None} & por defecto \\
+\texttt{l2\_regularization} & \texttt{0.0} & \texttt{0.0} & por defecto \\
+\texttt{learning\_rate} & \texttt{0.1} & \texttt{0.1} & por defecto \\
+\texttt{loss} & \texttt{'log\_loss'} & \texttt{'log\_loss'} & por defecto \\
+\texttt{max\_bins} & \texttt{255} & \texttt{255} & por defecto \\
+\texttt{max\_depth} & \texttt{None} & \texttt{None} & por defecto \\
+\texttt{max\_features} & \texttt{1.0} & \texttt{1.0} & por defecto \\
+\textbf{\texttt{max\_iter}} & \textbf{\texttt{200}} & \texttt{100} & explícito \\
+\texttt{max\_leaf\_nodes} & \texttt{31} & \texttt{31} & por defecto \\
+\texttt{min\_samples\_leaf} & \texttt{20} & \texttt{20} & por defecto \\
+\texttt{monotonic\_cst} & \texttt{None} & \texttt{None} & por defecto \\
+\texttt{n\_iter\_no\_change} & \texttt{10} & \texttt{10} & por defecto \\
+\textbf{\texttt{random\_state}} & \textbf{\texttt{42}} & \texttt{None} & explícito \\
+\texttt{scoring} & \texttt{'loss'} & \texttt{'loss'} & por defecto \\
+\texttt{tol} & \texttt{1e-07} & \texttt{1e-07} & por defecto \\
+\texttt{validation\_fraction} & \texttt{0.1} & \texttt{0.1} & por defecto \\
+\texttt{verbose} & \texttt{0} & \texttt{0} & por defecto \\
+\texttt{warm\_start} & \texttt{False} & \texttt{False} & por defecto \\
+\midrule
+\emph{Atributos ajustados} & \textbf{Multiclase} & \textbf{Binario} & \\
+\texttt{do\_early\_stopping\_} & \texttt{True} & \texttt{True} & \\
+\texttt{n\_iter\_ (iteraciones realmente usadas)} & \texttt{43} & \texttt{110} & \\
+\texttt{n\_trees\_per\_iteration\_} & \texttt{11} & \texttt{1} & \\
+\texttt{árboles totales} & \texttt{473} & \texttt{110} & \\
+\texttt{mejor iteración en la validación interna} & \texttt{33} & \texttt{100} & \\
+\texttt{n\_features\_in\_} & \texttt{48} & \texttt{48} & \\
+\texttt{clases} & \texttt{11} & \texttt{2} & \\
+\end{longtable}
+
+% Generado por reports/apendices/generar_apendices.py con get_params() sobre Detector de anomalías: bosque.
+\begin{longtable}{L{3.9cm} L{3.7cm} L{3.0cm} L{2.4cm}}
+\caption{Detector de anomalías: bosque: \texttt{IsolationForest}, 9 parámetros. En \textbf{negrilla}, los escritos en la llamada del código (aunque coincidan con el valor por defecto); el resto quedó en el valor por defecto de scikit-learn 1.9.0.}\label{tab:param-if}\\
+\toprule
+\textbf{Parámetro} & \textbf{Valor usado} & \textbf{Valor por defecto} & \textbf{Origen} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Parámetro} & \textbf{Valor usado} & \textbf{Valor por defecto} & \textbf{Origen} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\texttt{bootstrap} & \texttt{False} & \texttt{False} & por defecto \\
+\texttt{contamination} & \texttt{'auto'} & \texttt{'auto'} & por defecto \\
+\texttt{max\_features} & \texttt{1.0} & \texttt{1.0} & por defecto \\
+\texttt{max\_samples} & \texttt{'auto'} & \texttt{'auto'} & por defecto \\
+\textbf{\texttt{n\_estimators}} & \textbf{\texttt{200}} & \texttt{100} & explícito \\
+\textbf{\texttt{n\_jobs}} & \textbf{\texttt{-1}} & \texttt{None} & explícito \\
+\textbf{\texttt{random\_state}} & \textbf{\texttt{42}} & \texttt{None} & explícito \\
+\texttt{verbose} & \texttt{0} & \texttt{0} & por defecto \\
+\texttt{warm\_start} & \texttt{False} & \texttt{False} & por defecto \\
+\midrule
+\multicolumn{4}{l}{\emph{Atributos ajustados (leídos del modelo entrenado)}} \\
+\texttt{max\_samples\_ (flujos por árbol)} & \multicolumn{3}{l}{\texttt{256}} \\
+\texttt{n\_features\_in\_} & \multicolumn{3}{l}{\texttt{48}} \\
+\texttt{umbral cuantil 0,5 \% / 1 \% / 2 \%} & \multicolumn{3}{l}{\texttt{-0,6369 / -0,6140 / -0,5870}} \\
+\end{longtable}
+}
+
+\subsection{Estimadores del protocolo que no se despliegan}
+
+La regresión logística (referencia lineal), las dos técnicas de remuestreo y
+el Local Outlier Factor no viven en \texttt{models/}. Sus parámetros se leen
+instanciándolos con el mismo código que los usó. Dos precisiones. En la
+regresión logística y en el HistGradientBoosting de la matriz de la Fase 3,
+\texttt{class\_weight} está escrito en la llamada (\texttt{class\_weight=peso})
+y vale \texttt{None} salvo en la columna ``pesos de clase'', donde vale
+\texttt{'balanced'}: por eso figura como explícito aunque en tres de las cuatro
+columnas su valor sea el por defecto. Y en la regresión logística,
+\texttt{penalty} aparece como \texttt{'deprecated'} porque scikit-learn 1.8
+retiró ese parámetro; la regularización efectiva es L2
+(\texttt{l1\_ratio=0.0}) con \texttt{C=1.0} y el solucionador \texttt{lbfgs},
+todo por defecto.
+
+{\footnotesize\renewcommand{\arraystretch}{1.0}
+% Generado por reports/apendices/generar_apendices.py con get_params() sobre Regresión logística (referencia lineal).
+\begin{longtable}{L{3.9cm} L{3.7cm} L{3.0cm} L{2.4cm}}
+\caption{Regresión logística (referencia lineal): \texttt{LogisticRegression}, 14 parámetros. En \textbf{negrilla}, los escritos en la llamada del código (aunque coincidan con el valor por defecto); el resto quedó en el valor por defecto de scikit-learn 1.9.0.}\label{tab:param-reglog}\\
+\toprule
+\textbf{Parámetro} & \textbf{Valor usado} & \textbf{Valor por defecto} & \textbf{Origen} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Parámetro} & \textbf{Valor usado} & \textbf{Valor por defecto} & \textbf{Origen} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\texttt{C} & \texttt{1.0} & \texttt{1.0} & por defecto \\
+\textbf{\texttt{class\_weight}} & \textbf{\texttt{None} $\mid$ \texttt{'balanced'} (columna ``pesos'')} & \texttt{None} & explícito (según la técnica) \\
+\texttt{dual} & \texttt{False} & \texttt{False} & por defecto \\
+\texttt{fit\_intercept} & \texttt{True} & \texttt{True} & por defecto \\
+\texttt{intercept\_scaling} & \texttt{1} & \texttt{1} & por defecto \\
+\texttt{l1\_ratio} & \texttt{0.0} & \texttt{0.0} & por defecto \\
+\textbf{\texttt{max\_iter}} & \textbf{\texttt{1000}} & \texttt{100} & explícito \\
+\texttt{n\_jobs} & \texttt{None} & \texttt{None} & por defecto \\
+\texttt{penalty} & \texttt{'deprecated'} & \texttt{'deprecated'} & por defecto \\
+\textbf{\texttt{random\_state}} & \textbf{\texttt{42}} & \texttt{None} & explícito \\
+\texttt{solver} & \texttt{'lbfgs'} & \texttt{'lbfgs'} & por defecto \\
+\texttt{tol} & \texttt{0.0001} & \texttt{0.0001} & por defecto \\
+\texttt{verbose} & \texttt{0} & \texttt{0} & por defecto \\
+\texttt{warm\_start} & \texttt{False} & \texttt{False} & por defecto \\
+\end{longtable}
+
+% Generado por reports/apendices/generar_apendices.py con get_params() sobre SMOTE (\texttt{sampling\_strategy} es la función \texttt{estrategia\_smote}: eleva a 20.000 las clases con menos casos que eso).
+\begin{longtable}{L{3.9cm} L{3.7cm} L{3.0cm} L{2.4cm}}
+\caption{SMOTE (\texttt{sampling\_strategy} es la función \texttt{estrategia\_smote}: eleva a 20.000 las clases con menos casos que eso): \texttt{SMOTE}, 3 parámetros. En \textbf{negrilla}, los escritos en la llamada del código (aunque coincidan con el valor por defecto); el resto quedó en el valor por defecto de imbalanced-learn 0.14.2.}\label{tab:param-smote}\\
+\toprule
+\textbf{Parámetro} & \textbf{Valor usado} & \textbf{Valor por defecto} & \textbf{Origen} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Parámetro} & \textbf{Valor usado} & \textbf{Valor por defecto} & \textbf{Origen} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\texttt{k\_neighbors} & \texttt{5} & \texttt{5} & por defecto \\
+\textbf{\texttt{random\_state}} & \textbf{\texttt{42}} & \texttt{None} & explícito \\
+\textbf{\texttt{sampling\_strategy}} & \textbf{\texttt{función}\allowbreak\ \texttt{estrategia\_smote}} & \texttt{'auto'} & explícito \\
+\end{longtable}
+
+% Generado por reports/apendices/generar_apendices.py con get_params() sobre Submuestreo aleatorio (\texttt{sampling\_strategy} es la función \texttt{estrategia\_submuestreo}: reduce BENIGN a 200.000 casos).
+\begin{longtable}{L{3.9cm} L{3.7cm} L{3.0cm} L{2.4cm}}
+\caption{Submuestreo aleatorio (\texttt{sampling\_strategy} es la función \texttt{estrategia\_submuestreo}: reduce BENIGN a 200.000 casos): \texttt{RandomUnderSampler}, 3 parámetros. En \textbf{negrilla}, los escritos en la llamada del código (aunque coincidan con el valor por defecto); el resto quedó en el valor por defecto de imbalanced-learn 0.14.2.}\label{tab:param-rus}\\
+\toprule
+\textbf{Parámetro} & \textbf{Valor usado} & \textbf{Valor por defecto} & \textbf{Origen} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Parámetro} & \textbf{Valor usado} & \textbf{Valor por defecto} & \textbf{Origen} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\textbf{\texttt{random\_state}} & \textbf{\texttt{42}} & \texttt{None} & explícito \\
+\texttt{replacement} & \texttt{False} & \texttt{False} & por defecto \\
+\textbf{\texttt{sampling\_strategy}} & \textbf{\texttt{función}\allowbreak\ \texttt{estrategia\_submuestreo}} & \texttt{'auto'} & explícito \\
+\end{longtable}
+
+% Generado por reports/apendices/generar_apendices.py con get_params() sobre Local Outlier Factor (contraste; entrenado con una submuestra de 50.000 flujos benignos del lunes).
+\begin{longtable}{L{3.9cm} L{3.7cm} L{3.0cm} L{2.4cm}}
+\caption{Local Outlier Factor (contraste; entrenado con una submuestra de 50.000 flujos benignos del lunes): \texttt{LocalOutlierFactor}, 9 parámetros. En \textbf{negrilla}, los escritos en la llamada del código (aunque coincidan con el valor por defecto); el resto quedó en el valor por defecto de scikit-learn 1.9.0.}\label{tab:param-lof}\\
+\toprule
+\textbf{Parámetro} & \textbf{Valor usado} & \textbf{Valor por defecto} & \textbf{Origen} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Parámetro} & \textbf{Valor usado} & \textbf{Valor por defecto} & \textbf{Origen} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\texttt{algorithm} & \texttt{'auto'} & \texttt{'auto'} & por defecto \\
+\texttt{contamination} & \texttt{'auto'} & \texttt{'auto'} & por defecto \\
+\texttt{leaf\_size} & \texttt{30} & \texttt{30} & por defecto \\
+\texttt{metric} & \texttt{'minkowski'} & \texttt{'minkowski'} & por defecto \\
+\texttt{metric\_params} & \texttt{None} & \texttt{None} & por defecto \\
+\textbf{\texttt{n\_jobs}} & \textbf{\texttt{-1}} & \texttt{None} & explícito \\
+\textbf{\texttt{n\_neighbors}} & \textbf{\texttt{20}} & \texttt{20} & explícito (igual al defecto) \\
+\textbf{\texttt{novelty}} & \textbf{\texttt{True}} & \texttt{False} & explícito \\
+\texttt{p} & \texttt{2} & \texttt{2} & por defecto \\
+\end{longtable}
+
+% Generado por reports/apendices/generar_apendices.py leyendo las constantes de src/.
+\begin{longtable}{L{2.9cm} L{3.5cm} L{4.3cm} L{3.2cm}}
+\caption{Parámetros del protocolo que no viven en los modelos serializados.}\label{tab:param-protocolo}\\
+\toprule
+\textbf{Componente} & \textbf{Objeto} & \textbf{Valores fijados} & \textbf{Dónde} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Componente} & \textbf{Objeto} & \textbf{Valores fijados} & \textbf{Dónde} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Partición única & \texttt{train\_test\_split} & test\_size=0.2; stratify=Label; random\_state=42 & \path{src/split.py} \\
+Validación cruzada & \texttt{StratifiedKFold} & n\_splits=5 (igual al defecto); shuffle=True; random\_state=42 & \path{src/experimentos.py}, \path{src/interpretabilidad.py}, \path{notebooks/02} \\
+Clasificador trivial (línea base) & \texttt{DummyClassifier} & strategy='most\_frequent' & \path{notebooks/02_baseline.ipynb} \\
+Importancia por permutación & \texttt{permutation\_\allowbreak importance} & scoring='f1\_macro'; n\_repeats=5 (igual al defecto); random\_state=42; n\_jobs=-1; una sola partición (300.000 flujos de la validación de la primera) & \path{src/interpretabilidad.py} \\
+Modelo explicado por permutación & \texttt{HistGradient\allowbreak Boosting\allowbreak Classifier} & binario; misma configuración del Cuadro~\ref{tab:param-hgb}; ajustado con el 80\,\% de la primera partición & \path{src/interpretabilidad.py} \\
+Explicación por alerta & \texttt{shap.TreeExplainer} & sobre el clasificador multiclase serializado; parámetros por defecto & \path{app/pantallas.py} \\
+Umbral de operación de Bot & regla & alarma de Bot solo si $P(\mathrm{Bot}) \geq 0{,}999$; si no, la segunda clase más probable; fijado con probabilidades out-of-fold del entrenamiento & \path{src/evaluacion_final.py} \\
+Cuantiles del detector & constante & 0{,}5\,\%; 1\,\%; 2\,\% de los scores del lunes (1\,\% = referencia) & \path{src/no_supervisado.py}, \path{src/evaluacion_final.py} \\
+Variable identificadora retirada (prueba del puerto) & constante & \texttt{Destination Port} & \path{src/interpretabilidad.py} \\
+Selección de variables & constante & $|r| > 0{,}95$ sobre 500.000 flujos del entrenamiento (semilla 42); una representante por bloque & \path{src/features.py} \\
+Semilla única y versiones & constante & RANDOM\_STATE = 42; scikit-learn 1.9.0; Python 3.13; imbalanced-learn 0.14.2 & \path{src/config.py}, \path{models/metadatos.json}, \path{requirements*.txt} \\
+\end{longtable}
+}
 
 \end{document}

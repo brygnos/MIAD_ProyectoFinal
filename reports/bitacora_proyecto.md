@@ -626,8 +626,10 @@ entregarlo se contrastó cada afirmación con el código y los datos:
   (usuario que conoce redes pero no programa; aclaración de que el 83 % de
   benigno es tras deduplicar y el 80,3 % en crudo; "por primera y única vez";
   licencias sin código de requerimiento; sección de calibración de
-  hiperparámetros). **El `.tex` del repositorio es anterior a esas
-  ediciones**: la fuente actualizada debe exportarse desde Overleaf.
+  hiperparámetros). El `.tex` del repositorio fue anterior a esas
+  ediciones hasta el 20 de septiembre, cuando se reemplazó por la
+  exportación de Overleaf; desde entonces `.tex` y PDF del Módulo 2 quedan
+  congelados (ver Fase D).
 
 ### Los scripts de prueba se perdieron y se reconstruyeron desde la tabla
 
@@ -672,3 +674,141 @@ bitácora; el material presentable que listaba está en la sección siguiente.
 - Los errores encontrados y corregidos: muestran que se probó de verdad.
 - El determinismo bit a bit de los modelos empaquetados y la honestidad de la
   demo (flujos nunca vistos, etiquetas en un archivo que el tablero no lee).
+
+
+---
+
+## Fase D — Reporte técnico final: la retroalimentación incorporada (20 de septiembre de 2026)
+
+El reporte del Módulo 2 obtuvo **97/100**. Su fuente `reporte_tecnico_experimentos.tex`
+(ya con las ediciones de Overleaf) y su PDF quedan **congelados** como registro
+de lo calificado: no se tocan (verificado por suma MD5 antes y después de esta
+fase). El anexo técnico (ii) de la entrega final evoluciona en una copia,
+`reporte_tecnico_final.tex` → `reporte_tecnico_final.pdf` (20 páginas frente a
+11), que incorpora la retroalimentación de esa entrega y de la anterior. En
+esta fase no se modificó ningún archivo de `src/`, `app/` ni `tests/`, ni
+resultado, cifra o checkpoint alguno.
+
+### Qué cambió en el documento
+
+1. **Portada.** Ya no es "Módulo 2": título "Reporte técnico de experimentos",
+   subtítulo "Entrega final — Anexo técnico (ii)". Autores sin cambio; la fecha
+   la pone la compilación (no hay `\date`), como en el original.
+2. **Umbrales por cuantiles explicados** (retroalimentación previa: "no es
+   claro cómo se logra establecer los umbrales por cuantiles del lunes"). Nuevo
+   párrafo en §5.1 con los cuatro pasos (entrenar solo con el lunes benigno →
+   puntuar ese mismo tráfico → fijar el corte en un percentil → marcar lo que
+   caiga por debajo), la lectura como *presupuesto explícito de falsas alarmas*,
+   por qué el valor numérico del corte (−0,614 al 1 %) no se reporta como
+   parámetro, y su relación con la contaminación del lunes y con la deriva
+   (R11). Referenciado desde el Cuadro 3 y desde el párrafo de R4 en §7.
+3. **Apéndice A — evidencia de colinealidad** (retroalimentación: "anexar una
+   lista o mapa de correlaciones"). Cuadro A.1 con los 13 bloques tomados
+   *textualmente* de `GRUPOS_CORRELACIONADOS` (`src/features.py`) y **figura
+   nueva** `reports/figures/18_correlaciones_train_095.png`: mapa de |r| de las
+   36 variables implicadas, ordenadas bloque a bloque, calculado **solo sobre el
+   conjunto de entrenamiento** (muestra de 500.000 flujos, semilla 42) y **al
+   umbral con el que se decidió (0,95)**, no al 0,999 de la figura 02 del EDA
+   (que además usaba el dataset completo). Verificado por código: 45 pares, 13
+   componentes conexas, coincidencia exacta con la lista del módulo. Referenciado
+   desde el Cuadro 3 (poda 71 → 48) y desde §5.1.
+4. **Apéndice B — configuración de parámetros** (retroalimentación: "reporten la
+   configuración de los parámetros, no simplemente digan que usaron valores
+   estándar"). Nada escrito de memoria: `get_params()` y atributos ajustados de
+   los tres modelos de `models/`; los estimadores del protocolo instanciados con
+   la misma función que los construyó (`construir_pipeline` de
+   `src/experimentos.py`) y las constantes leídas de `src/`. Ocho cuadros
+   (B.1–B.8; en la primera versión eran once, ver la revisión de abajo): todos
+   los parámetros de cada objeto con la marca explícito / por defecto, más los
+   del protocolo (partición, CV, SMOTE, submuestreo, regresión logística, LOF,
+   importancia por permutación, umbral de Bot, cuantiles, versiones). El párrafo
+   "Calibración de hiperparámetros" de §5.1 ya no habla de "valores estándar":
+   remite al apéndice.
+
+### El hallazgo: 200 iteraciones era el techo, no las usadas
+
+`HistGradientBoosting` trae `early_stopping='auto'`, que se activa con más de
+10.000 observaciones (siempre, aquí): reserva el 10 % del tramo de entrenamiento
+como validación interna, ajusta los árboles con el 90 % restante y se detiene
+cuando la pérdida no mejora durante 10 iteraciones. Leído de los modelos
+serializados (`n_iter_`): el **multiclase usó 43 iteraciones** (473 árboles = 43
+× 11 clases; mejor pérdida en la 33) y el **binario 110** (mejor en la 100). El
+documento anterior decía "usa 200 iteraciones"; se corrigió en §5.1 y se
+documenta en B.1. Los modelos de cada partición de la CV no se conservaron
+(solo sus métricas), así que su cuenta exacta no se reporta.
+
+Otras discrepancias entre documento y código encontradas al leerlo:
+- `contamination='auto'` del Isolation Forest queda por defecto porque **no se
+  usa**: el corte lo fija el percentil de los scores del lunes; y
+  `max_samples='auto'` son 256 flujos por árbol.
+- La regresión logística muestra `penalty='deprecated'` (scikit-learn 1.8 lo
+  retiró); la regularización efectiva es L2 (`l1_ratio=0.0`) con `C=1.0`, lbfgs.
+- Únicos parámetros fijados a mano en todo el prototipo: `class_weight`,
+  `max_iter`, `random_state` (clasificadores); `n_estimators`, `random_state`,
+  `n_jobs` (bosque); `max_iter=1000`, `random_state` (logística);
+  `sampling_strategy` y `random_state` (SMOTE y submuestreo); `novelty`, `n_jobs`
+  (LOF). Todo lo demás, por defecto.
+
+### Cómo se generó (reproducible)
+
+`reports/apendices/generar_apendices.py` (entorno de análisis: necesita
+imblearn y `data/processed/train.parquet`) re-deriva los bloques, dibuja la
+figura 18 y escribe los fragmentos LaTeX (`tabla_bloques.tex`,
+`tablas_parametros_modelos.tex`, `tablas_parametros_protocolo.tex`) y los CSV de
+evidencia (`bloques_correlacion_train.csv`, `parametros_modelos.csv` con 264
+filas, `atributos_ajustados.csv`). Los fragmentos se pegan en el `.tex` (no se
+usa `\input`, para que un solo archivo compile en Overleaf). Compilación con
+Tectonic: sin errores, referencias resueltas, todas las figuras cargan; las
+cifras oficiales del Módulo 2 aparecen íntegras en el PDF final (comparación
+automática de todos los números entre ambos PDF). El script vive en
+`reports/apendices/` y no en `src/` porque en esta fase `src/` estaba
+reservado para la reescritura de comentarios; puede moverse después. Se añadió
+`!reports/apendices/*.csv` al `.gitignore` y `reporte_tecnico_final.tex` al
+`export-ignore` (mismo criterio que la fuente del Módulo 2: viaja el PDF).
+
+### Revisión del 21 de septiembre: cuatro ajustes tras la lectura del PDF
+
+1. **Cuadro 3, fila del escalado, partida en dos.** Agrupaba regresión
+   logística e Isolation Forest bajo "`StandardScaler` dentro del pipeline de
+   validación"; para el detector no hay validación cruzada: el escalador se
+   ajusta únicamente con los 394.236 flujos benignos del lunes. Cada fila lleva
+   ahora su tratamiento.
+2. **§5.1 ya no dice "para toda decisión".** La CV de 5 particiones se usó para
+   comparar alternativas, elegir modelo y fijar el punto de operación; la
+   importancia por permutación se midió con una sola partición (modelo ajustado
+   con el 80 % de la primera, medido sobre 300.000 flujos de su validación), por
+   costo computacional. El texto lo declara y remite al cuadro del protocolo.
+3. **Criterio de "explícito" corregido en el método, no en el caso.** El
+   generador decidía "explícito" comparando el valor contra el default, y eso
+   fallaba cuando el código fija un valor igual al default (el Cuadro del LOF
+   marcaba `n_neighbors=20` como "por defecto" aunque `src/no_supervisado.py`
+   lo escribe). Ahora "explícito" = **escrito en la llamada del código**: el
+   generador lee las llamadas de `src/` con `ast` (registro en
+   `reports/apendices/llamadas_en_codigo.csv`) y marca "explícito (igual al
+   defecto)" cuando ambas cosas ocurren. Cambiaron de clasificación **9 filas /
+   4 parámetros** (`reports/apendices/cambios_de_criterio.csv`):
+   `n_neighbors=20` del LOF; `n_splits=5` de `StratifiedKFold`; `n_repeats=5`
+   de `permutation_importance`; y `class_weight=None` en las 6 combinaciones de
+   la matriz de la Fase 3 sin pesos de clase (regresión logística y HistGB ×
+   sin corrección / SMOTE / submuestreo + SMOTE), porque el código lo escribe
+   como `class_weight=peso` y `peso` vale `None` en esas columnas. Hallazgo
+   lateral del `ast`: la `LogisticRegression` de `interpretabilidad.py`
+   (coeficientes) no escribe `class_weight`; la de `experimentos.py` sí.
+4. **Duplicación eliminada sin perder información.** Los dos cuadros de
+   `HistGradientBoostingClassifier` (idénticos en sus 21 parámetros) son ahora
+   uno, con los atributos ajustados de multiclase y binario en columnas; los
+   dos cuadros de `StandardScaler` (enteramente por defecto) se reemplazaron
+   por una frase que conserva los 394.236 flujos del lunes. Quedan 8 cuadros
+   (B.1 iteraciones, B.2 HistGB, B.3 Isolation Forest, B.4 regresión
+   logística, B.5 SMOTE, B.6 submuestreo, B.7 LOF, B.8 protocolo); el CSV de
+   264 filas sigue completo como evidencia. Recompilado con Tectonic: **19
+   páginas**, referencias resueltas, cifras oficiales íntegras, Módulo 2
+   intacto (MD5).
+
+### Pendiente en este documento
+
+- **§8 (estado de implementación y plan) NO se tocó**: se reescribirá al final,
+  cuando estén terminados el despliegue, el manual y la prueba de usabilidad,
+  para que refleje el estado real. Con ella habrá que actualizar el punto (vi)
+  del resumen y la conclusión 5, que remiten al plan.
+- Decidir si el `\date` se fija a la fecha de entrega.

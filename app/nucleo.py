@@ -1,12 +1,12 @@
 """Núcleo del tablero: modelos serializados y clasificación por lotes.
 
 No importa Streamlit (el cacheo lo aplica streamlit_app.py al envolver
-`cargar_recursos`), así que puede probarse sin interfaz.
+`cargar_recursos`), así que se puede probar sin interfaz.
 
 Los modelos y sus metadatos vienen de models/ (generados por
-src/modelo_final.py con todo el conjunto de entrenamiento). Las métricas
+src/modelo_final.py usando todo el conjunto de entrenamiento). Las métricas
 fijas de la evaluación vienen de los CSVs versionados en
-reports/resultados_final/. Aquí no se recalcula ninguna cifra del proyecto.
+reports/resultados_final/. No se recalculan cifras del proyecto aquí.
 """
 
 import json
@@ -26,8 +26,8 @@ RUTA_RESULTADOS_FASE4 = RAIZ / "reports" / "resultados_fase4"
 ETIQUETA_NORMAL = "BENIGN"
 NOMBRE_NORMAL = "Normal"
 
-# Versión de la ESTRUCTURA que devuelve cargar_recursos(). El tablero la pasa
-# como argumento a la función cacheada: si cambia, Streamlit descarta el caché
+# Versión de la ESTRUCTURA que devuelve cargar_recursos(). El dash la pasa
+# como argumento a la función cacheada. Si cambia, Streamlit descarta el caché
 # viejo y vuelve a cargar. Sin esto, un servidor que lleva rato corriendo
 # sigue sirviendo un diccionario de recursos anterior aunque el código ya
 # haya cambiado, y las pantallas fallan con un KeyError críptico.

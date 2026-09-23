@@ -47,6 +47,7 @@ reports/figures/*
 !reports/resultados_fase3/*.csv
 !reports/resultados_fase4/*.csv
 !reports/resultados_final/*.csv
+!reports/apendices/*.csv
 !reports/figures/*.png
 
 # El archivo de demostración del tablero SÍ se versiona (especificación §6)

@@ -94,7 +94,7 @@ def registrar(evento: str, archivo: str, flujos: int, alertas: int, umbral: str)
 def _sin_archivo() -> None:
     st.info(
         "**Aún no hay archivo cargado.** Usa la barra lateral: sube un CSV de "
-        "flujos de red o carga uno de los dos archivos de demostración. Un "
+        "flujos de red o usa uno de los dos archivos de demostración. Un "
         "*flujo* es una conversación entre dos computadores, resumida en "
         "números (cuántos paquetes, de qué tamaño, con qué ritmo); el tablero "
         "clasifica cada flujo sin mirar el contenido de la comunicación."
@@ -104,17 +104,17 @@ def _sin_archivo() -> None:
 def _nota_tres_modelos() -> None:
     """Explica por qué el clasificador de tipo reconoce 10 clases y no 14."""
     st.info(
-        "**¿Por qué el tipo de ataque tiene 10 opciones si el dataset trae "
-        "14?** Tu archivo puede contener los 14 tipos de ataque del dataset, "
-        "pero el clasificador de tipo aprendió 10: los 3 ataques web se "
+        "**Nota** Encontrarás que el tipo de ataque tiene 10 opciones en vez de 14"
+        "como en el dataset. Esto es porque el "
+        "clasificador de tipo aprendió 10: los 3 ataques web se "
         "agrupan en la familia 'Web Attack', y **Heartbleed** (11 casos en "
         "2,8 millones de flujos) e **Infiltration** (36 casos) son demasiado "
         "escasos para aprenderlos y medirlos como clases propias con "
-        "seriedad. Por eso la herramienta usa **tres modelos que se "
-        "complementan**: si uno de esos dos ataques rarísimos aparece, el "
+        "seriedad. Por esta razón la herramienta usa **tres modelos que se "
+        "complementan**: si uno de esos dos ataques extremadamente raros aparece, el "
         "tipo asignado será **incorrecto por construcción** (el clasificador "
-        "no conoce esa clase) — pero el veredicto binario de '¿Ataque?' y la "
-        "marca de anomalía sí pueden atraparlo. Esa es la razón de tener "
+        "no conoce esa clase), pero el veredicto binario de '¿Ataque?' y la "
+        "marca de anomalía sí pueden atraparlo. Es por esto que decidimos tener "
         "tres modelos y no uno."
     )
 
@@ -137,9 +137,9 @@ def mostrar_validacion(reporte) -> None:
 def panel_resumen(recursos, estado) -> None:
     st.header("Panel de resumen")
     st.caption(
-        "Qué muestra: el resultado global del archivo que cargaste y cuánta "
-        "carga de revisión te ahorra la herramienta. Todo lo de esta pantalla "
-        "sale de **tu archivo**; ninguna cifra es inventada ni de ejemplo."
+        "Aquí encontrarás el resultado global del archivo que cargaste y cuánta "
+        "carga de revisión apróximada te ahorra la herramienta. Toda la información de esta pantalla "
+        "sale **del archivo cargado**. ¡Prueba con los archivos demo si no tienes uno a la mano!"
     )
     if estado is None:
         _sin_archivo()
@@ -163,11 +163,12 @@ def panel_resumen(recursos, estado) -> None:
         "(flujos que el modelo clasificó como algún tipo de ataque)."
     )
     st.warning(
-        "**El intercambio, dicho sin rodeos:** sin herramienta, el analista "
-        "revisa todo y no se le escapa nada — a costa de un trabajo inviable. "
-        "Con herramienta, revisa una fracción priorizada y acepta que el "
-        "modelo pueda dejar pasar algo. No es magia: es un intercambio, y "
-        "conviene decidirlo con los ojos abiertos."
+        "Sin usar esta herramienta el analista **revisa absolutamente todo** e idealmente no se le escapa nada, "
+        "a costa de un trabajo muy largo y muchas veces inviable si trabaja solo. "
+        "Con esta herramienta **solo se revisa una fracción priorizada**, aceptando que el modelo pueda "
+        "dejar pasar algo, pero con mucho más tiempo para indagar en esos casos puntuales sin "
+        "tanta fatiga mental, es un intercambio y se debe tratar con cuidado, no hace todo el trabajo, "
+        "pero lo puede facilitar mucho si se utiliza correctamente."
     )
 
     if n_alertas:
@@ -180,10 +181,10 @@ def panel_resumen(recursos, estado) -> None:
 
     umbral = umbral_actual()
     anomalo, _ = nucleo.marcar_anomalias(resultado, recursos, umbral)
-    st.subheader("Además: comportamiento anómalo")
+    st.subheader("Comportamiento anómalo")
     st.markdown(
-        f"El detector de anomalías —un segundo modelo que aprendió solo cómo "
-        f"se ve el tráfico normal y marca lo que se sale de ese patrón— señaló "
+        f"El detector de anomalías es un segundo modelo que aprendió solo cómo "
+        f"se ve el tráfico normal y marca lo que se sale de ese patrón. En este caso señaló "
         f"**{int(anomalo.sum()):,}** flujos como anómalos al umbral actual del "
         f"**{umbral}**. El detalle, el ajuste del umbral y los límites de este "
         "detector están en la pantalla *Detección de anomalías*."
@@ -194,19 +195,19 @@ def panel_resumen(recursos, estado) -> None:
 def pantalla_clasificacion(recursos, estado) -> None:
     st.header("Clasificación")
     st.caption(
-        "Qué muestra: primero, cómo quedó clasificado **tu archivo**; después, "
-        "el desempeño **fijo** del modelo en su examen final (499.616 flujos "
+        "Aquí puedes ver cómo quedó clasificado **tu archivo** y "
+        "el desempeño **fijo** del modelo en su test final (499.616 flujos "
         "de prueba que nunca vio al entrenar). Cada sección dice de cuál de "
         "las dos fuentes viene."
     )
 
     # ---- 1) datos vivos: el archivo del usuario ----
-    st.subheader("Tu archivo: distribución de clases")
+    st.subheader("Distribución de clases (Archivo del Usuario)")
     if estado is None:
         _sin_archivo()
     else:
         resultado = estado["resultado"]
-        st.caption("Fuente: el archivo que cargaste en esta sesión.")
+        st.caption("Fuente: el archivo cargado en esta sesión.")
         st.bar_chart(resultado["clase"].value_counts())
         tabla = (
             resultado.groupby("clase")
@@ -228,7 +229,7 @@ def pantalla_clasificacion(recursos, estado) -> None:
 
     # ---- 2) datos fijos: la evaluación del modelo ----
     st.divider()
-    st.subheader("El examen final del modelo (resultado fijo)")
+    st.subheader("Resultado Fijo: Test Final del modelo")
     st.caption(
         "Fuente: la evaluación única sobre 499.616 flujos de prueba que el "
         "modelo nunca vio al entrenar. Estas cifras no dependen de tu archivo "
@@ -238,11 +239,11 @@ def pantalla_clasificacion(recursos, estado) -> None:
         f"**Fatiga de alertas bajo control:** el modelo mantiene las falsas "
         f"alarmas en **{nucleo.CIFRAS_OFICIALES['falsas_alarmas_pct']}** del "
         "tráfico normal (una *falsa alarma* es un flujo normal marcado como "
-        "ataque: cada una cuesta tiempo de un analista). El medio para "
-        f"lograrlo: un desempeño de **{nucleo.CIFRAS_OFICIALES['macro_f1_final']}** "
-        "de macro-F1 — un puntaje entre 0 y 1 que promedia qué tan bien se "
-        "detecta **cada** clase, pesando igual a la más común y a la más rara; "
-        "un modelo trivial que dijera 'todo es normal' apenas lograría "
+        "ataque: cada una *cuesta tiempo del analista*). Para lograr eso, "
+        f"buscamos un desempeño alto de macro-F1 (**{nucleo.CIFRAS_OFICIALES['macro_f1_final']}**) "
+        "el cual promedia qué tan bien se "
+        "detecta **cada** clase, pesando igual a la más común y a la más rara. "
+        "Como comparación, un modelo que dijera 'todo es normal' apenas lograría "
         f"{nucleo.CIFRAS_OFICIALES['piso_trivial']}."
     )
 
@@ -262,7 +263,7 @@ def pantalla_clasificacion(recursos, estado) -> None:
         metricas[col] = metricas[col].round(3)
     st.dataframe(metricas, hide_index=True, width="stretch")
     st.caption(
-        "Cómo leer la tabla — **Detección (recall):** de todos los casos "
+        "Cómo leer la tabla: **Detección (recall):** de todos los casos "
         "reales de esa clase, qué fracción encontró el modelo. **Acierto de "
         "la alarma (precisión):** de todas las veces que el modelo anunció esa "
         "clase, qué fracción era correcta. **Calidad del ordenamiento (AP):** "
@@ -318,7 +319,7 @@ def _tabla_falsas_alarmas_dia(recursos, etiqueta_cuantil: str) -> pd.DataFrame:
 def pantalla_anomalias(recursos, estado) -> None:
     st.header("Detección de anomalías")
     st.caption(
-        "Qué muestra: los flujos de **tu archivo** cuyo comportamiento se "
+        "Aquí están los flujos de **tu archivo** cuyo comportamiento se "
         "sale del patrón del tráfico normal, según un detector que **nunca "
         "vio un ataque**: solo aprendió cómo se ve lo normal. Sirve para "
         "atrapar comportamientos raros que un clasificador entrenado con "
@@ -326,15 +327,15 @@ def pantalla_anomalias(recursos, estado) -> None:
     )
 
     st.markdown(
-        "**Cómo se fija el umbral (y por qué no es un número arbitrario):** "
-        "el detector se entrena solo con el tráfico del lunes, que es 100% "
+        "**Cómo se fija el umbral:**\n" 
+        "El detector se entrena solo con el tráfico del lunes, que es 100% "
         "benigno. Luego se le pide puntuar ese mismo tráfico conocido-normal, "
         "lo que produce una distribución de qué tan normal se ve cada flujo. "
         "El umbral se fija en el percentil elegido de esa distribución: por "
         "construcción, ese porcentaje del tráfico que sabemos normal queda "
         "por debajo. Cualquier flujo que puntúe por debajo de ese corte se "
-        "marca como anómalo. La ventaja: el umbral es un **presupuesto "
-        "explícito de falsas alarmas** — elegir 1% significa \"acepto "
+        "marca como anómalo. Es decir, este umbral sirve como un **presupuesto "
+        "explícito de falsas alarmas**, donde elegir 1% significa \"acepto "
         "equivocarme en 1 de cada 100 flujos normales\"."
     )
 
@@ -370,7 +371,7 @@ def pantalla_anomalias(recursos, estado) -> None:
                 hide_index=True, width="stretch",
             )
             st.caption(
-                "Cómo leerla — **Score de anomalía:** qué tan normal se ve el "
+                "**Cómo leer la tabla:** **Score de anomalía:** qué tan normal se ve el "
                 "flujo; más bajo = más raro (la tabla ordena del más raro al "
                 "menos). **Tipo asignado:** lo que dijo el clasificador de "
                 "tipo para ese mismo flujo; un flujo puede ser anómalo y aun "
@@ -385,12 +386,12 @@ def pantalla_anomalias(recursos, estado) -> None:
             )
 
     st.warning(
-        "**El punto ciego de este detector, dicho en su propia pantalla:** ve "
-        "lo estructuralmente raro — Heartbleed (robo de memoria con "
+        "Este detector ve "
+        "lo estructuralmente raro (Heartbleed (robo de memoria con "
         "respuestas gigantes), los ataques 'lentos' tipo slowloris "
-        "(conexiones eternas casi sin datos), Infiltration — y es **ciego a "
+        "(conexiones eternas casi sin datos), Infiltration). Es decir, es **ciego a "
         "los ataques camuflados**: fuerza bruta de contraseñas, escaneo de "
-        "puertos y Bot. La razón: en esos ataques cada flujo individual "
+        "puertos y Bot. El motivo es que en esos ataques cada flujo individual "
         "parece una conexión normal; lo anómalo está en el **conjunto** "
         "(miles de conexiones casi idénticas en minutos), y un detector que "
         "mira flujos de a uno no puede verlo. Para esos tipos está el "
@@ -398,12 +399,12 @@ def pantalla_anomalias(recursos, estado) -> None:
     )
 
     st.divider()
-    st.subheader("Qué mostró la evaluación (resultado fijo)")
+    st.subheader("Resultado de la evaluación del proyecto (resultado fijo)")
     st.caption(
-        "Fuente: la evaluación del proyecto, no tu archivo. Con el "
+        "Fuente: la evaluación del proyecto como tal, no tu archivo. Con el "
         "presupuesto de falsas alarmas en 1%: el detector encontró el 89% de "
         "los flujos de Heartbleed, el 52% de slowloris y el 48% de "
-        "Infiltration — sin haber visto jamás un ataque etiquetado — y un "
+        "Infiltration (sin haber visto jamás un ataque etiquetado) y un "
         "11,8% de los ataques en general (por el punto ciego de arriba)."
     )
 
@@ -431,17 +432,17 @@ def pantalla_anomalias(recursos, estado) -> None:
     peor_pct = f"{peor['Falsas alarmas']:.1%}".replace(".", ",")  # 9,6% en prosa
     veces = round(peor["Falsas alarmas"] / float(nucleo.CUANTILES[umbral]))
     st.markdown(
-        "**Cómo leerla y por qué importa.** El detector se calibró con el "
+        "**Cómo leerla y por qué es importante.** El detector se calibró con el "
         "tráfico del **lunes**, que es 100% benigno: aprendió cómo se ve lo "
         "normal *ese día*. Cuando el tráfico normal de otro día se comporta "
         "distinto, el detector lo ve raro y las falsas alarmas suben aunque "
-        "no haya ningún ataque. Eso se llama **deriva**: el tráfico normal "
+        "no haya ningún ataque. A eso se llama **deriva**: el tráfico normal "
         "cambia con el tiempo. En la tabla, casi todos los tramos quedan "
         f"cerca del presupuesto elegido, pero el tramo *{peor['Día / tramo']}* "
         f"llegó a **{peor_pct}** con un presupuesto del {umbral}: casi "
         f"{veces} veces más falsas alarmas de las aceptadas. "
-        "**La lección para un despliegue real:** un detector así no se "
-        "calibra una vez y se olvida; hay que medir esta tabla periódicamente "
+        "**Lección para un despliegue real:** un detector de este tipo no se "
+        "calibra una vez; hay que medir esta tabla periódicamente "
         "y **recalibrar** (re-entrenar con tráfico normal reciente) cuando la "
         "tasa se aleje del presupuesto. Esa medición continua es lo que "
         "permitiría decidir *cuándo* re-entrenar, en vez de adivinarlo."
